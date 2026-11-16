@@ -51,7 +51,7 @@ async function checkPlugin() {
   }
 }
 
-/** Вызывается после успешной проверки браузера. Возвращает версию для политики Q-05. */
+/** Читает версию CSP через cades API для применения политики Q-05. */
 export async function readCspVersion() {
   return cryptoOperation('csp', 'CSP_CHECK_FAILED', async () => {
     const { execute } = await import('crypto-pro-actual-cades-plugin');

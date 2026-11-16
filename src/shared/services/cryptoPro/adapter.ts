@@ -1,11 +1,12 @@
 import type { Certificate as PluginCertificate } from 'crypto-pro-actual-cades-plugin';
-import type { CertificateFilters, Cryptopro, TestDocument } from '../../api';
-import { isSupportedSigningMode } from '../../api/schemas/common.schema';
-import {
-  base64Schema,
-  hash256Schema,
-  hash512Schema,
+import type {
+  Certificate,
+  CertificateFilters,
+  Cryptopro,
+  TestDocument,
 } from '../../api';
+import { isSupportedSigningMode } from '../../api/schemas/common.schema';
+import { base64Schema, hash256Schema, hash512Schema } from '../../api';
 import { matchesCertificate, readCertificateNames } from './certificateNames';
 import { CryptoProError, cryptoOperation } from './error';
 
@@ -15,7 +16,7 @@ type SigningMode = Pick<
   'sign_type' | 'sign_format' | 'sign_position'
 >;
 
-export type HashSignatureParameters =
+type HashSignatureParameters =
   | { profile: 'PKCS7'; tsaAddress?: never }
   | { profile: 'CADES_T' | 'CADES_X_LONG_TYPE_1'; tsaAddress: string };
 
@@ -53,7 +54,13 @@ async function* matchingCertificates(filters?: CertificateFilters) {
     }
     throw error;
   }
+  const now = Date.now();
   for (const certificate of certificates) {
+    if (!certificate.validFrom || !certificate.validTo) continue;
+    const validFrom = new Date(certificate.validFrom).getTime();
+    const validTo = new Date(certificate.validTo).getTime();
+    if (!(validFrom <= now && now <= validTo)) continue;
+
     const names = readCertificateNames(
       certificate.subjectName,
       certificate.issuerName,
@@ -132,19 +139,28 @@ function selectHash(
   return { bits, hex: hash.data };
 }
 
-export async function signHash({
-  thumbprint,
-  mode,
-  filters,
-  hashes,
-  parameters,
-}: {
+type SigningInput = {
   thumbprint: string;
   mode: SigningMode;
   filters?: CertificateFilters;
-  hashes: Partial<Pick<TestDocument, 'hash256' | 'hash512'>>;
   parameters: HashSignatureParameters;
-}) {
+};
+type SigningHashes = Partial<Pick<TestDocument, 'hash256' | 'hash512'>>;
+
+export async function signHash({
+  hashes,
+  ...input
+}: SigningInput & { hashes: SigningHashes }) {
+  const { signatures, certificate } = await signHashes(input, [hashes]);
+  return { signatureBase64: signatures[0], certificate };
+}
+
+export async function signHashes(
+  { thumbprint, mode, filters, parameters }: SigningInput,
+  documents: readonly SigningHashes[],
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
   if (!isSupportedSigningMode(mode)) {
     throw new CryptoProError('signing', 'UNSUPPORTED_SIGNING_MODE');
   }
@@ -179,12 +195,24 @@ export async function signHash({
     'KEY_ALGORITHM_UNAVAILABLE',
     () => certificate.getAlgorithm(),
   );
-  const hash = selectHash(oid, hashes);
-  const publicCertificate = await cryptoOperation(
+  // Проверяем всю группу до первого вызова SignHash.
+  const hashes = documents.map((document) => selectHash(oid, document));
+  signal?.throwIfAborted();
+  const publicCertificate = await cryptoOperation<Certificate>(
     'certificate',
     'CERTIFICATE_EXPORT_FAILED',
     async () => ({
       ...(await readCertificate(certificate, names)),
+      person: {
+        last_name: '',
+        first_name: '',
+        middle_name: '',
+        inn: '',
+        snils: '',
+        ...names.person,
+      },
+      organization: { name: '', inn: '', ogrn: '', ...names.organization },
+      issuer: { name: '', inn: '', ogrn: '', ...names.issuer },
       certificate_base64: readBase64(
         await certificate.exportBase64(),
         'certificate',
@@ -192,38 +220,51 @@ export async function signHash({
     }),
   );
 
-  const signatureBase64 = await cryptoOperation(
-    'signing',
-    'SIGN_HASH_FAILED',
-    async () => {
-      const { execute } = await import('crypto-pro-actual-cades-plugin');
-      const base64: unknown = await execute(async ({ cadesplugin }) => {
-        const data = await cadesplugin.CreateObjectAsync('CAdESCOM.HashedData');
-        await data.propset_Algorithm(
-          hash.bits === 256
-            ? cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_256
-            : cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_512,
-        );
-        await data.SetHashValue(hash.hex);
+  const signatures: string[] = [];
+  for (const hash of hashes) {
+    signal?.throwIfAborted();
+    signatures.push(
+      await signSelectedHash(certificate, hash, parameters, signal),
+    );
+  }
+  signal?.throwIfAborted();
+  return { signatures, certificate: publicCertificate };
+}
 
-        const signer = await cadesplugin.CreateObjectAsync('CAdESCOM.CPSigner');
-        // Тот же сертификат, который прошёл актуальный фильтр и был экспортирован.
-        await signer.propset_Certificate(certificate._cadesCertificate);
-        const profile = {
-          PKCS7: cadesplugin.CADESCOM_PKCS7_TYPE,
-          CADES_T: cadesplugin.CADESCOM_CADES_T,
-          CADES_X_LONG_TYPE_1: cadesplugin.CADESCOM_CADES_X_LONG_TYPE_1,
-        }[parameters.profile];
-        if (parameters.profile !== 'PKCS7') {
-          await signer.propset_TSAAddress(parameters.tsaAddress);
-        }
-        const signedData = await cadesplugin.CreateObjectAsync(
-          'CAdESCOM.CadesSignedData',
-        );
-        return signedData.SignHash(data, signer, profile);
-      });
-      return readBase64(base64, 'signing');
-    },
-  );
-  return { signatureBase64, certificate: publicCertificate };
+async function signSelectedHash(
+  certificate: PluginCertificate,
+  hash: ReturnType<typeof selectHash>,
+  parameters: HashSignatureParameters,
+  signal?: AbortSignal,
+) {
+  return cryptoOperation('signing', 'SIGN_HASH_FAILED', async () => {
+    const { execute } = await import('crypto-pro-actual-cades-plugin');
+    const base64: unknown = await execute(async ({ cadesplugin }) => {
+      const data = await cadesplugin.CreateObjectAsync('CAdESCOM.HashedData');
+      await data.propset_Algorithm(
+        hash.bits === 256
+          ? cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_256
+          : cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_512,
+      );
+      await data.SetHashValue(hash.hex);
+
+      const signer = await cadesplugin.CreateObjectAsync('CAdESCOM.CPSigner');
+      // Тот же сертификат, который прошёл актуальный фильтр и был экспортирован.
+      await signer.propset_Certificate(certificate._cadesCertificate);
+      const profile = {
+        PKCS7: cadesplugin.CADESCOM_PKCS7_TYPE,
+        CADES_T: cadesplugin.CADESCOM_CADES_T,
+        CADES_X_LONG_TYPE_1: cadesplugin.CADESCOM_CADES_X_LONG_TYPE_1,
+      }[parameters.profile];
+      if (parameters.profile !== 'PKCS7') {
+        await signer.propset_TSAAddress(parameters.tsaAddress);
+      }
+      const signedData = await cadesplugin.CreateObjectAsync(
+        'CAdESCOM.CadesSignedData',
+      );
+      signal?.throwIfAborted();
+      return signedData.SignHash(data, signer, profile);
+    });
+    return readBase64(base64, 'signing');
+  });
 }

@@ -38,6 +38,26 @@ test('отклоняет multipart/mixed без boundary', async () => {
   ).rejects.toThrow();
 });
 
+test('отклоняет multipart с повтором части file', async () => {
+  const { body, contentType } = documentMultipart();
+  const original = new TextDecoder().decode(body);
+  const fileStart = original.lastIndexOf(
+    '\r\n--',
+    original.indexOf('name="file"'),
+  );
+  const end = original.lastIndexOf('\r\n--');
+  const repeated =
+    original.slice(0, end) +
+    original.slice(fileStart, end) +
+    original.slice(end);
+  await expect(
+    parseDocumentResponse(
+      new TextEncoder().encode(repeated).buffer,
+      contentType,
+    ),
+  ).rejects.toThrow('В ответе повторяется часть response или file');
+});
+
 test.each(['response', 'file'] as const)(
   'отклоняет ответ без %s',
   async (omit) => {

@@ -40,7 +40,7 @@ export function SettingScreen({
       <ul className={styles.list} aria-label="Этапы проверки">
         {lists.testing.map((item, index) => {
           const result = progress?.get(item.name);
-          const state = result?.state ?? item.state;
+          const state = result?.state ?? 'WAIT';
           return (
             <li key={index} className={styles.row}>
               <div>

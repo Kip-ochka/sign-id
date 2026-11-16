@@ -11,10 +11,13 @@ import { DocumentList } from './DocumentList';
 import { PreviewDialog } from './PreviewDialog';
 import type { DocumentPreview } from './PreviewDialog';
 
+export type SigningPhase = 'signing' | 'sending';
+
 export function SigningScreen({
   response,
   certificates,
   busy,
+  phase,
   onSign,
   onOpenDocument,
   pendingDocumentId,
@@ -22,6 +25,7 @@ export function SigningScreen({
   closePreview,
 }: SignatureControls & {
   response: SigningResponse;
+  phase?: SigningPhase;
   onOpenDocument?: (id: string) => void;
   pendingDocumentId?: string;
   preview?: DocumentPreview;
@@ -58,12 +62,16 @@ export function SigningScreen({
         onSelect={selectCertificate}
         busy={blocked}
       />
-      {busy && pendingDocumentId === undefined && (
-        <Loading>Выполняем подписание</Loading>
+      {phase && (
+        <Loading>
+          {phase === 'sending'
+            ? 'Отправляем подписанные документы'
+            : 'Выполняем подписание'}
+        </Loading>
       )}
       <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
       {preview && closePreview && (
-        <PreviewDialog file={preview} close={closePreview} />
+        <PreviewDialog key={preview.url} file={preview} close={closePreview} />
       )}
     </ScreenCard>
   );

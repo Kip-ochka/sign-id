@@ -1,5 +1,20 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
+import { prepareCheck } from '../screens/check/prepareCheck';
+import {
+  checkCsp,
+  checkWorkplace,
+  getSettingStages,
+} from '../screens/setting/checkWorkplace';
+import type {
+  SettingStage,
+  WorkplaceResult,
+} from '../screens/setting/checkWorkplace';
+import { prepareSigning } from '../screens/signing/prepareSigning';
+import { localFallback } from '../shared/api';
+import type { CheckScreen, SigningScreen } from '../shared/api';
+import { findCertificates } from '../shared/services/cryptoPro/adapter';
+import { checkBrowserPlugin } from '../shared/services/cryptoPro/workplace';
 import { initialState, saveResponse, showFallback, showScreen } from './model';
 import { getCryptoErrorCode, getCryptoErrorKey } from './network';
 import { pollUntilProcess } from './polling';
@@ -14,14 +29,13 @@ import {
   requestStart,
 } from './requests';
 import type { ProcessReply, RequestOptions, SignedEvent } from './requests';
-import type { SettingScreen } from '../shared/api';
+import { createSettingCache } from './settingCache';
+import type { SettingCache } from './settingCache';
 import type { ProcessState } from './model';
 
-export type HasSettingCache = (
-  inquiryId: string,
-  response: SettingScreen,
-  signal: AbortSignal,
-) => Promise<boolean>;
+const defaultSettingCache = createSettingCache(() =>
+  typeof window === 'undefined' ? undefined : window.navigator.userAgent,
+);
 
 function resetProcess(
   previous: ProcessState,
@@ -38,7 +52,7 @@ function resetProcess(
 // Хранит состояние заявки и связывает команды экранов с сетевыми функциями.
 export function useProcess(
   inquiryId: string,
-  hasSettingCache?: HasSettingCache,
+  settingCache: SettingCache = defaultSettingCache,
 ) {
   const [state, setState] = useState(() => initialState(inquiryId));
   const activeRequest = useRef<AbortController>();
@@ -52,9 +66,73 @@ export function useProcess(
   // При размонтировании, в том числе при смене заявки, отменяем текущую операцию.
   useLayoutEffect(() => stop, [stop]);
 
+  // Загружаем текст ошибки из справочника и показываем ID исходного запроса.
+  const showError = useCallback(
+    async (
+      key: string | undefined,
+      signal: AbortSignal,
+      requestId?: string,
+    ) => {
+      const screen = await loadErrorScreen(key, signal);
+      if (!signal.aborted) {
+        setState((previous) =>
+          showScreen(previous, { ...screen }, requestId, key),
+        );
+      }
+    },
+    [],
+  );
+
+  const showSetupError = useCallback(
+    (code: string, signal: AbortSignal) => {
+      if (signal.aborted) return;
+      if (code === 'CSP_VERSION_TOO_LOW') {
+        setState((previous) =>
+          showScreen(previous, {
+            ...localFallback,
+            screen: {
+              ...localFallback.screen,
+              title: 'Версия КриптоПро CSP не подходит',
+              message:
+                'Установите КриптоПро CSP версии 5.0 или выше и повторите проверку.',
+            },
+          }),
+        );
+        return;
+      }
+      return showError(getCryptoErrorKey(code, 'setup'), signal);
+    },
+    [showError],
+  );
+
+  // Вход и BACK всегда загружают актуальную выборку сертификатов.
+  const openSignatureScreen = useCallback(
+    async (screen: CheckScreen | SigningScreen, signal: AbortSignal) => {
+      setState((previous) => showScreen(previous, screen));
+      try {
+        if (screen.process === 'SIGNING') {
+          await checkBrowserPlugin();
+          signal.throwIfAborted();
+          await checkCsp();
+          signal.throwIfAborted();
+        }
+        const signatureCertificates = await findCertificates(
+          screen.cryptopro.filters,
+        );
+        if (signal.aborted) return;
+        if (!signatureCertificates.length)
+          return showSetupError('NO_CERT', signal);
+        setState((previous) => ({ ...previous, signatureCertificates }));
+      } catch (error) {
+        await showSetupError(getCryptoErrorCode(error), signal);
+      }
+    },
+    [showSetupError],
+  );
+
   // Ответ с task запускает polling. Ответ с process определяет следующий экран.
   const applyResponse = useCallback(
-    async (reply: ProcessReply, options: RequestOptions) => {
+    async (reply: ProcessReply, options: RequestOptions, readySent = false) => {
       const { signal } = options;
       while (!signal.aborted) {
         const { data, requestId } = reply;
@@ -77,18 +155,33 @@ export function useProcess(
         }
 
         const screen = data.response;
-        if (screen.process === 'SETTING' && hasSettingCache) {
-          // Session доступна в Context ещё до завершения проверки кэша.
+        if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
           setState((previous) => saveResponse(previous, screen));
+          await openSignatureScreen(screen, signal);
+          return;
+        }
+        if (screen.process === 'SETTING') {
+          const stages = getSettingStages(screen);
+          if (stages.length === 0 || readySent) {
+            setState(showFallback);
+            return;
+          }
+          // Сохраняем session, оставляя текущий экран до решения по кэшу.
+          setState((previous) => ({
+            ...saveResponse(previous, screen),
+            settingProgress: undefined,
+            workplaceCertificates: undefined,
+          }));
           let cached = false;
           try {
-            cached = await hasSettingCache(inquiryId, screen, signal);
+            cached = await settingCache.has(inquiryId, stages);
           } catch {
             // Если кэш недоступен, открываем SETTING для ручной проверки.
           }
           signal.throwIfAborted();
           if (cached) {
             reply = await requestReady(options);
+            readySent = true;
             continue;
           }
         }
@@ -103,7 +196,7 @@ export function useProcess(
         return;
       }
     },
-    [hasSettingCache, inquiryId],
+    [inquiryId, openSignatureScreen, settingCache],
   );
 
   // Сначала получаем настройки, чтобы уже запрос start использовал их для retry.
@@ -117,23 +210,6 @@ export function useProcess(
       await applyResponse(reply, options);
     },
     [applyResponse, inquiryId],
-  );
-
-  // Загружаем текст ошибки из справочника и показываем ID исходного запроса.
-  const showError = useCallback(
-    async (
-      key: string | undefined,
-      signal: AbortSignal,
-      requestId?: string,
-    ) => {
-      const screen = await loadErrorScreen(key, signal);
-      if (!signal.aborted) {
-        setState((previous) =>
-          showScreen(previous, { ...screen }, requestId, key),
-        );
-      }
-    },
-    [],
   );
 
   // Общий запуск команд: управляет busy, отменой и обработкой сетевых ошибок.
@@ -180,7 +256,11 @@ export function useProcess(
       } finally {
         if (activeRequest.current === controller) {
           activeRequest.current = undefined;
-          setState((previous) => ({ ...previous, busy: false }));
+          setState((previous) => ({
+            ...previous,
+            busy: false,
+            signaturePhase: undefined,
+          }));
         }
       }
     },
@@ -204,11 +284,14 @@ export function useProcess(
       if (manual) restartedAfter401.current = false;
       if (!backScreen) return restart();
       stop();
+      if (backScreen.process === 'CHECK' || backScreen.process === 'SIGNING') {
+        return run((signal) => openSignatureScreen(backScreen, signal));
+      }
       setState((previous) =>
         showScreen({ ...previous, busy: false }, backScreen),
       );
     },
-    [backScreen, restart, stop],
+    [backScreen, openSignatureScreen, restart, run, stop],
   );
 
   const retry = () => {
@@ -222,13 +305,47 @@ export function useProcess(
     setState((previous) => showFallback({ ...previous, busy: false }));
   };
 
-  const ready = () => {
-    if (state.screen.process !== 'SETTING') return;
+  const checkSetting = () => {
+    const { screen, settings } = state;
+    if (screen.process !== 'SETTING') return;
+    const stages = getSettingStages(screen);
+    if (stages.length === 0) return;
     return run(async (signal) => {
-      const options = { inquiryId, settings: state.settings, signal };
+      setState((previous) => ({
+        ...previous,
+        settingProgress: undefined,
+        workplaceCertificates: undefined,
+      }));
+      const update = (stage: SettingStage, result: WorkplaceResult) =>
+        setState((previous) => ({
+          ...previous,
+          settingProgress: { ...previous.settingProgress, [stage]: result },
+        }));
+      const result = await checkWorkplace(
+        screen,
+        stages,
+        signal,
+        (stage, progress) => update(stage, { state: progress }),
+        (stage, error) =>
+          update(stage, { state: 'ERROR', code: getCryptoErrorCode(error) }),
+      );
+      if (!result || signal.aborted) return;
+
+      settingCache.save(inquiryId, stages);
+      setState((previous) => ({
+        ...previous,
+        workplaceCertificates: result.certificates,
+      }));
+      const options = { inquiryId, settings, signal };
       const reply = await requestReady(options);
-      await applyResponse(reply, options);
+      await applyResponse(reply, options, true);
     });
+  };
+
+  const showSettingError = (stage: SettingStage) => {
+    const result = state.settingProgress?.[stage];
+    if (state.screen.process !== 'SETTING' || result?.state !== 'ERROR') return;
+    return run(async (signal) => showSetupError(result.code, signal));
   };
 
   async function handleCheck(
@@ -268,6 +385,7 @@ export function useProcess(
       }
       signal.throwIfAborted();
       const options = { inquiryId, settings: state.settings, signal };
+      setState((previous) => ({ ...previous, signaturePhase: 'sending' }));
       if (process === 'CHECK' && signed.event === 'check') {
         await handleCheck(signed, options);
       } else if (process === 'SIGNING' && signed.event === 'signing') {
@@ -278,12 +396,34 @@ export function useProcess(
     });
   };
 
+  const submitSelectedCertificate = (thumbprint: string) => {
+    const { screen, signatureCertificates } = state;
+    if (
+      (screen.process !== 'CHECK' && screen.process !== 'SIGNING') ||
+      !signatureCertificates?.some(
+        (certificate) => certificate.thumbprint === thumbprint,
+      )
+    )
+      return;
+    return submitSignature((signal) => {
+      setState((previous) => ({ ...previous, signaturePhase: 'signing' }));
+      return screen.process === 'CHECK'
+        ? prepareCheck(screen, thumbprint)
+        : prepareSigning(screen, thumbprint, signal);
+    });
+  };
+
   const downloadDocument = (documentId: string) => {
-    if (state.screen.process !== 'SIGNING') return;
+    const { screen, settings } = state;
+    if (
+      screen.process !== 'SIGNING' ||
+      !screen.screen.lists.documents.some(({ id }) => id === documentId)
+    )
+      return;
     return run((signal) =>
       requestDocument(documentId, {
         inquiryId,
-        settings: state.settings,
+        settings,
         signal,
       }),
     );
@@ -298,7 +438,16 @@ export function useProcess(
       start,
       retry,
       back,
-      ready,
+      checkSetting,
+      showSettingError,
+      submitCheck: (thumbprint: string) => {
+        if (state.screen.process === 'CHECK')
+          return submitSelectedCertificate(thumbprint);
+      },
+      submitSigning: (thumbprint: string) => {
+        if (state.screen.process === 'SIGNING')
+          return submitSelectedCertificate(thumbprint);
+      },
       submitSignature,
       downloadDocument,
       reportCryptoError,

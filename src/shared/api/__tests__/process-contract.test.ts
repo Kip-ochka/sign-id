@@ -88,6 +88,30 @@ test.each(Object.entries(unsupportedSigningProcesses))(
   },
 );
 
+test.each([
+  { ...signingProcess, cryptopro: undefined },
+  {
+    ...signingProcess,
+    cryptopro: { ...signingProcess.cryptopro, tsp_address: ' ' },
+  },
+  ...[
+    [],
+    [
+      signingProcess.screen.lists.documents[0],
+      signingProcess.screen.lists.documents[0],
+    ],
+    [{ ...signingProcess.screen.lists.documents[0], id: ' ' }],
+  ].map((documents) => ({
+    ...signingProcess,
+    screen: { ...signingProcess.screen, lists: { documents } },
+  })),
+])(
+  'отклоняет SIGNING без параметров или с неоднозначным комплектом документов %#',
+  (response) => {
+    expect(parseProcessResult(response).success).toBe(false);
+  },
+);
+
 test('локальный fallback соответствует R-27', () => {
   expect(screenResponseSchema.parse(localFallback)).toEqual({
     process: 'STATUS',

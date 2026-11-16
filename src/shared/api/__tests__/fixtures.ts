@@ -35,17 +35,18 @@ export const settingProcess = {
     title: 'Настройка рабочего места',
     message: 'Выполните проверку',
     lists: {
-      testing: [
-        {
-          name: 'Проверка',
-          state: 'WAIT',
-          message: 'Ожидание',
-          description: 'Проверка рабочего места',
-          text_button: 'Инструкция',
-        },
-      ],
+      testing: ['certificate', 'extension', 'program'].map((name) => ({
+        name,
+        state: 'WAIT' as const,
+        message: 'Ожидание',
+        description: 'Проверка рабочего места',
+        text_button: 'Подробнее',
+      })),
     },
-    buttons,
+    buttons: {
+      ...buttons,
+      accent: { message: 'Запустить проверку', process: 'SETTING' },
+    },
   },
   cryptopro: { filters: { person: { inn: 'synthetic-inn' } } },
 } satisfies SettingScreen;

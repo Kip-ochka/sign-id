@@ -192,9 +192,26 @@ export function requestSigning(
   );
 }
 
-export function requestDocument(documentId: string, options: RequestOptions) {
+export async function requestDocument(
+  documentId: string,
+  options: RequestOptions,
+) {
   const body = { ...requestBody(options.inquiryId), document_id: documentId };
-  return sendRequest(() => getDocument(body, options.signal), options, {
-    document: true,
-  });
+  const { document_id, title, format, base64 } = await sendRequest(
+    () => getDocument(body, options.signal),
+    options,
+    { document: true },
+  );
+  const invalidDocument = () =>
+    new ProcessRequestError('RESPONSE_DOC_DOWNLOAD_ERROR');
+  if (document_id !== documentId) throw invalidDocument();
+
+  let binary: string;
+  try {
+    binary = atob(base64);
+  } catch {
+    throw invalidDocument();
+  }
+  if (!binary.length) throw invalidDocument();
+  return { title, format, binary };
 }

@@ -24,6 +24,12 @@ export const parseDocumentResponse = async (
   if (jsonPart === null || filePart === null) {
     throw new Error('В ответе отсутствует часть response или file');
   }
+  if (
+    parts.getAll('response').length !== 1 ||
+    parts.getAll('file').length !== 1
+  ) {
+    throw new Error('В ответе повторяется часть response или file');
+  }
 
   const jsonText =
     typeof jsonPart === 'string' ? jsonPart : await jsonPart.text();

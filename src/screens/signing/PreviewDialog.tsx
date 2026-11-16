@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from '../shared/Screen.module.css';
 import local from './PreviewDialog.module.css';
 export type DocumentPreview = {
   title: string;
   url: string;
   filename: string;
-  kind: 'image' | 'pdf';
+  kind?: 'image' | 'pdf';
 };
 
 export function PreviewDialog({
@@ -16,6 +16,10 @@ export function PreviewDialog({
   close: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const download = useRef<HTMLAnchorElement>(null);
+  const [renderFailed, setRenderFailed] = useState(false);
+  const pdfUnavailable =
+    file.kind === 'pdf' && !navigator.pdfViewerEnabled;
   useEffect(() => {
     const element = dialog.current;
     const trigger = document.activeElement;
@@ -26,6 +30,9 @@ export function PreviewDialog({
         trigger.focus();
     };
   }, []);
+  useEffect(() => {
+    if (!file.kind) download.current?.click();
+  }, [file.kind]);
 
   return (
     <dialog
@@ -40,9 +47,10 @@ export function PreviewDialog({
       <h2 id="preview-title">{file.title}</h2>
       <div className={styles.actions + ' ' + local.actions}>
         <button type="button" className={styles.primary} onClick={close}>
-          Закрыть просмотр
+          {file.kind ? 'Закрыть просмотр' : 'Закрыть'}
         </button>
         <a
+          ref={download}
           className={styles.secondary}
           href={file.url}
           download={file.filename}
@@ -50,10 +58,22 @@ export function PreviewDialog({
           Скачать документ
         </a>
       </div>
-      {file.kind === 'image' ? (
-        <img src={file.url} alt={file.title} />
-      ) : (
-        <iframe src={file.url} title={file.title} />
+      {(renderFailed || pdfUnavailable) && (
+        <p role="status">Просмотр недоступен. Скачайте документ.</p>
+      )}
+      {!renderFailed && file.kind === 'image' && (
+        <img
+          src={file.url}
+          alt={file.title}
+          onError={() => setRenderFailed(true)}
+        />
+      )}
+      {!renderFailed && !pdfUnavailable && file.kind === 'pdf' && (
+        <iframe
+          src={file.url}
+          title={file.title}
+          onError={() => setRenderFailed(true)}
+        />
       )}
     </dialog>
   );

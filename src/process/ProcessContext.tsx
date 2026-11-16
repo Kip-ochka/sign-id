@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 import { useProcess } from './useProcess';
-import type { HasSettingCache } from './useProcess';
+import type { SettingCache } from './settingCache';
 
 const ProcessContext = createContext<ReturnType<typeof useProcess> | undefined>(
   undefined,
@@ -11,14 +11,14 @@ const ProcessContext = createContext<ReturnType<typeof useProcess> | undefined>(
 // Запускает процесс для текущей заявки и предоставляет экранам состояние и команды.
 export function ProcessProvider({
   inquiryId,
-  hasSettingCache,
+  settingCache,
   children,
 }: {
   inquiryId: string;
-  hasSettingCache?: HasSettingCache;
+  settingCache?: SettingCache;
   children: ReactNode;
 }) {
-  const process = useProcess(inquiryId, hasSettingCache);
+  const process = useProcess(inquiryId, settingCache);
   const { start } = process.commands;
 
   useEffect(() => {

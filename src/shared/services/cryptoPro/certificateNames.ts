@@ -24,9 +24,9 @@ function decodeEscapes(value: string) {
 
 function readDn(dn: string) {
   const attributes = new Map<string, string[]>();
-  // CAdES может заключать значения в кавычки, удваивать кавычки или экранировать разделители.
+  // CAdES может возвращать локализованные имена атрибутов и экранированные значения.
   const attribute =
-    /\s*([\w.]+)\s*=\s*(?:"((?:[^"\\]|""|\\.)*)"|((?:[^",;+\\]|\\.)*?))(?:\s*([,;+])|\s*$)/gy;
+    /\s*([\p{L}\d_.]+(?:[ \t]+[\p{L}\d_.]+)*)\s*=\s*(?:"((?:[^"\\]|""|\\.)*)"|((?:[^",;+\\]|\\.)*?))(?:\s*([,;+])|\s*$)/guy;
   for (let offset = 0; offset < dn.length;) {
     const match = attribute.exec(dn);
     if (!match) throw new Error('Некорректное имя сертификата');
@@ -72,13 +72,26 @@ export function readCertificateNames(subjectName: string, issuerName: string) {
 
 type CertificateNames = ReturnType<typeof readCertificateNames>;
 
+function normalizeFilterValue(key: string, value: string) {
+  if (key === 'snils') return value.replace(/[\s\p{Pd}]/gu, '');
+  if (key === 'inn' || key === 'ogrn') return value.replace(/\s/g, '');
+  return value.normalize().trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 function matchesFields(
   fields: Partial<Record<string, string>>,
   filter?: Partial<Record<string, string>>,
 ) {
-  return Object.entries(filter ?? {}).every(
-    ([key, value]) => value === undefined || fields[key] === value,
-  );
+  return Object.entries(filter ?? {}).every(([key, value]) => {
+    if (value === undefined) return true;
+    const actual = fields[key];
+    const expected = normalizeFilterValue(key, value);
+    return (
+      actual !== undefined &&
+      expected !== '' &&
+      normalizeFilterValue(key, actual) === expected
+    );
+  });
 }
 
 export function matchesCertificate(

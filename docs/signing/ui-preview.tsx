@@ -263,6 +263,7 @@ function Fixture({
           response={response}
           certificates={certificates}
           busy={scenario === 'check-busy'}
+          phase={scenario === 'check-busy' ? 'signing' : undefined}
           onSign={onSign}
         />
       ) : (

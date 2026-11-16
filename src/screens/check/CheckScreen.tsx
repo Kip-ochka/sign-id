@@ -34,9 +34,11 @@ export function CheckScreen({
   response,
   certificates,
   busy,
+  phase,
   onSign,
 }: SignatureControls & {
   response: CheckResponse;
+  phase?: 'signing' | 'sending';
 }) {
   const { selected, selectCertificate } = useSelectedCertificate(certificates);
   const { title, message, buttons, consent } = response.screen;
@@ -50,7 +52,13 @@ export function CheckScreen({
         busy={blocked}
       />
       <ConsentText consent={consent} />
-      {busy && <Loading>Выполняем тестовую подпись</Loading>}
+      {phase && (
+        <Loading>
+          {phase === 'sending'
+            ? 'Отправляем тестовую подпись'
+            : 'Выполняем тестовую подпись'}
+        </Loading>
+      )}
       <WorkActions
         buttons={buttons}
         busy={blocked}

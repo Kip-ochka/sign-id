@@ -5,6 +5,11 @@ import type {
   StatusScreen,
   TaskResponse,
 } from '../shared/api';
+import type {
+  SettingStage,
+  WorkplaceResult,
+} from '../screens/setting/checkWorkplace';
+import type { SigningCertificate } from '../shared/services/cryptoPro/adapter';
 
 export const defaultSettings: SettingsResponse = {
   retry_time: 1000,
@@ -37,6 +42,10 @@ export interface ProcessState {
   requestId?: string;
   errorKey?: string;
   backScreen?: WorkScreen;
+  settingProgress?: Partial<Record<SettingStage, WorkplaceResult>>;
+  workplaceCertificates?: readonly SigningCertificate[];
+  signatureCertificates?: readonly SigningCertificate[];
+  signaturePhase?: 'signing' | 'sending';
   busy: boolean;
 }
 
@@ -93,6 +102,8 @@ export function showScreen(
         ? state.previousProcess
         : state.screen.process,
     backScreen: workScreen ? screen : state.backScreen,
+    signatureCertificates: undefined,
+    signaturePhase: undefined,
     task: screen.process === 'WAITING' ? state.task : undefined,
     requestId,
     errorKey,

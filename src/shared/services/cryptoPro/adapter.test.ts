@@ -12,7 +12,7 @@ import {
   getCryptoErrorCode,
   getCryptoErrorKey,
 } from '../../../process/network';
-import { findCertificates, signHash } from './adapter';
+import { findCertificates, signHash, signHashes } from './adapter';
 import { checkBrowserPlugin, readCspVersion } from './workplace';
 
 jest.mock('crypto-pro-actual-cades-plugin', () => ({
@@ -206,6 +206,27 @@ describe('поиск сертификатов', () => {
     ).rejects.toMatchObject({ code: 'NO_CERT' });
   });
 
+  test('читает известные OID рядом с локализованными именами атрибутов', async () => {
+    const selected = certificate();
+    selected.subjectName =
+      'SN=Иванов, ИНН организации=099, OID.1.2.643.100.4=002';
+    selected.issuerName = 'ОГРНИП=008, O=Тестовый УЦ, OID.1.2.643.100.4=005';
+    pluginCertificates.mockResolvedValue([selected]);
+
+    await expect(
+      findCertificates({
+        organization: { inn: '002' },
+        issuer: { inn: '005' },
+      }),
+    ).resolves.toMatchObject([
+      {
+        person: { last_name: 'Иванов' },
+        organization: { inn: '002' },
+        issuer: { name: 'Тестовый УЦ', inn: '005' },
+      },
+    ]);
+  });
+
   test('пустой список библиотеки отличается от сбоя чтения', async () => {
     pluginCertificates.mockRejectedValueOnce(
       new Error('Нет доступных сертификатов'),
@@ -220,6 +241,89 @@ describe('поиск сертификатов', () => {
       stage: 'certificate',
     });
   });
+
+  test('возвращает все действующие совпадения, исключая просроченные, будущие и повреждённые записи', async () => {
+    const now = new Date('2026-11-16T12:00:00Z');
+    const dateNow = jest.spyOn(Date, 'now').mockReturnValue(now.getTime());
+    const valid = certificate();
+    const expired = {
+      ...valid,
+      thumbprint: 'EXPIRED',
+      validTo: '2026-11-16T11:59:59.999Z',
+    };
+    const future = {
+      ...valid,
+      thumbprint: 'FUTURE',
+      validFrom: '2026-11-16T12:00:00.001Z',
+    };
+    const malformed = {
+      ...valid,
+      thumbprint: 'MALFORMED',
+      validFrom: 'invalid',
+    };
+    const other = { ...valid, thumbprint: 'OTHER', subjectName: 'INN=009' };
+    try {
+      pluginCertificates.mockResolvedValue([
+        expired,
+        { ...valid, validFrom: now.toISOString() },
+        other,
+        future,
+        { ...valid, thumbprint: 'BB', validTo: now.toISOString() },
+        malformed,
+        { ...valid, thumbprint: 'aa' },
+      ]);
+      await expect(
+        findCertificates({ person: { inn: '001' } }),
+      ).resolves.toMatchObject([{ thumbprint: 'AA' }, { thumbprint: 'BB' }]);
+      expect(pluginCertificates).toHaveBeenCalledWith(true);
+
+      pluginCertificates.mockResolvedValue([expired, future, malformed]);
+      await expect(findCertificates()).rejects.toMatchObject({
+        code: 'NO_CERT',
+      });
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+
+  test('сравнивает нормализованные реквизиты и возвращает исходные значения', async () => {
+    const selected = certificate();
+    selected.subjectName =
+      'SN=Тестов, G="Иван  Иванович", SNILS=123-456-789 00, O="Тестовое   ООО", INNLE=002';
+    selected.issuerName = 'O=Тестовый УЦ, OGRN=001 002';
+    pluginCertificates.mockResolvedValue([selected]);
+    const filters = {
+      person: {
+        last_name: ' ТЕСТОВ ',
+        first_name: 'иван иванович',
+        snils: '12345678900',
+      },
+      organization: { name: 'тестовое ооо', inn: '0 02' },
+      issuer: { ogrn: '001002' },
+    };
+
+    await expect(findCertificates(filters)).resolves.toMatchObject([
+      {
+        person: { first_name: 'Иван  Иванович', snils: '123-456-789 00' },
+        organization: { name: 'Тестовое   ООО', inn: '002' },
+        issuer: { ogrn: '001 002' },
+      },
+    ]);
+    for (const person of [
+      { snils: '12345678901' },
+      { snils: '-' },
+      { first_name: 'Иван' },
+      { middle_name: 'Иванович' },
+    ]) {
+      await expect(findCertificates({ person })).rejects.toMatchObject({
+        code: 'NO_CERT',
+      });
+    }
+    mockSigning();
+    const { certificate: metadata } = await signHash({ ...input, filters });
+    expect(metadata.person.first_name).toBe('Иван  Иванович');
+    expect(metadata.person.middle_name).toBe('');
+  });
 });
 
 function mockSigning(base64 = 'YQ==') {
@@ -230,7 +334,11 @@ function mockSigning(base64 = 'YQ==') {
   };
   const signed = {
     SignHash: jest.fn<
-      (data: unknown, signer: unknown, profile: number) => string
+      (
+        data: unknown,
+        signer: unknown,
+        profile: number,
+      ) => string | Promise<string>
     >(() => base64),
   };
   const objects = {
@@ -295,6 +403,36 @@ describe('отсоединённая подпись одного готовог�
     expect(signed.SignHash).toHaveBeenCalledWith(data, signer, 0x5);
   });
 
+  test('заполняет пустыми строками отсутствующие реквизиты для REST', async () => {
+    const selected = certificate();
+    selected.subjectName = 'SN=Тестов, O=Тестовое ООО, INNLE=002';
+    selected.issuerName = 'O=Тестовый УЦ';
+    pluginCertificates.mockResolvedValue([selected]);
+    mockSigning();
+
+    const result = await signHash({
+      ...input,
+      filters: { organization: { inn: '002' } },
+    });
+    expect(result.certificate.person).toEqual({
+      last_name: 'Тестов',
+      first_name: '',
+      middle_name: '',
+      inn: '',
+      snils: '',
+    });
+    expect(result.certificate.organization).toEqual({
+      name: 'Тестовое ООО',
+      inn: '002',
+      ogrn: '',
+    });
+    expect(result.certificate.issuer).toEqual({
+      name: 'Тестовый УЦ',
+      inn: '',
+      ogrn: '',
+    });
+  });
+
   test.each(['1.2.643.2.2.19', '1.2.643.7.1.1.3.2', '1.2.3'])(
     'отклоняет неподдерживаемый OID %s',
     async (oid) => {
@@ -319,6 +457,7 @@ describe('отсоединённая подпись одного готовог�
     { ...mode, sign_format: 'archived' },
     { ...mode, sign_format: 'xml' },
     { ...mode, sign_position: 'attached' },
+    { ...mode, sign_type: 'unknown' },
   ])('отклоняет режим %j до обращения к плагину', async (mode) => {
     await expect(signHash({ ...input, mode })).rejects.toMatchObject({
       code: 'UNSUPPORTED_SIGNING_MODE',
@@ -337,6 +476,11 @@ describe('отсоединённая подпись одного готовог�
     await expect(
       signHash({ ...input, filters: { issuer: { inn: '002' } } }),
     ).rejects.toMatchObject({ code: 'NO_CERT' });
+    pluginCertificates.mockResolvedValueOnce([
+      { ...certificate(), validTo: '2021-01-01' },
+      { ...certificate(), thumbprint: 'BB' },
+    ]);
+    await expect(signHash(input)).rejects.toMatchObject({ code: 'NO_CERT' });
     expect(pluginExecute).not.toHaveBeenCalled();
   });
 
@@ -349,6 +493,96 @@ describe('отсоединённая подпись одного готовог�
         stage: 'signing',
         code: 'BASE64_ERROR',
       });
+    },
+  );
+});
+
+describe('последовательная подпись документов', () => {
+  const documents = [
+    hashes,
+    { hash256: 'e'.repeat(64), hash512: 'f'.repeat(128) },
+    hashes,
+  ];
+
+  test.each([
+    ['1.2.643.7.1.1.1.1', 101, 'hash256'],
+    ['1.2.643.7.1.1.1.2', 102, 'hash512'],
+  ] as const)(
+    'подписывает хэши выбранного алгоритма %s последовательно',
+    async (oid, algorithm, field) => {
+      const selected = certificate(oid);
+      pluginCertificates.mockResolvedValue([selected]);
+      const { data, signer, signed } = mockSigning();
+      let complete!: (base64: string) => void;
+      let markStarted!: () => void;
+      const started = new Promise<void>((resolve) => {
+        markStarted = resolve;
+      });
+      signed.SignHash.mockImplementationOnce(() => {
+        markStarted();
+        return new Promise<string>((resolve) => {
+          complete = resolve;
+        });
+      });
+      const plan = signHashes(input, documents.slice(0, 2));
+      await started;
+      expect(data.SetHashValue.mock.calls).toEqual([[documents[0][field]]]);
+      complete('Yg==');
+      await expect(plan).resolves.toMatchObject({
+        signatures: ['Yg==', 'YQ=='],
+      });
+      expect(selected.getAlgorithm).toHaveBeenCalledTimes(1);
+      expect(selected.exportBase64).toHaveBeenCalledTimes(1);
+      expect(data.propset_Algorithm.mock.calls).toEqual([
+        [algorithm],
+        [algorithm],
+      ]);
+      expect(data.SetHashValue.mock.calls).toEqual(
+        documents.slice(0, 2).map((document) => [document[field]]),
+      );
+      expect(signer.propset_Certificate.mock.calls).toEqual(
+        Array.from({ length: 2 }, () => [selected._cadesCertificate]),
+      );
+      expect(signed.SignHash.mock.calls).toEqual([
+        [data, signer, 0xffff],
+        [data, signer, 0xffff],
+      ]);
+      expect(signer.propset_TSAAddress).not.toHaveBeenCalled();
+    },
+  );
+
+  test('ошибка хэша последнего документа обнаруживается до первой подписи', async () => {
+    pluginCertificates.mockResolvedValue([certificate()]);
+    await expect(
+      signHashes(input, [hashes, { hash512: hashes.hash512 }]),
+    ).rejects.toMatchObject({ code: 'INVALID_SIGNING_HASH' });
+    expect(pluginExecute).not.toHaveBeenCalled();
+  });
+
+  test.each(['невалидная подпись', 'токен извлечён', 'операция отменена'])(
+    'после сбоя на втором документе третий не подписывается: %s',
+    async (failure) => {
+      pluginCertificates.mockResolvedValue([certificate()]);
+      const { signed } = mockSigning();
+      const controller = new AbortController();
+      signed.SignHash.mockReturnValueOnce('YQ==').mockImplementationOnce(() => {
+        if (failure === 'токен извлечён') throw new Error('Token removed');
+        if (failure === 'операция отменена') controller.abort();
+        return failure === 'невалидная подпись' ? 'broken!' : 'YQ==';
+      });
+      await expect(
+        signHashes(input, documents, controller.signal),
+      ).rejects.toMatchObject(
+        failure === 'операция отменена'
+          ? { name: 'AbortError' }
+          : {
+              code:
+                failure === 'токен извлечён'
+                  ? 'SIGN_HASH_FAILED'
+                  : 'BASE64_ERROR',
+            },
+      );
+      expect(signed.SignHash).toHaveBeenCalledTimes(2);
     },
   );
 });

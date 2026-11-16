@@ -60,7 +60,7 @@ export const certificateSchema = z.object({
 });
 
 // --- cryptopro: фильтры поиска — любое поле и любой вложенный объект может отсутствовать,
-// в полях может прийти несколько значений.
+// каждое переданное поле содержит одну строку.
 export const certificateFiltersSchema = z.object({
   person: personSchema.partial().optional(),
   organization: organizationSchema.partial().optional(),
@@ -75,6 +75,10 @@ export const cryptoproSchema = z.object({
   hash256_archived: hash256Schema.optional(),
   hash512_archived: hash512Schema.optional(),
   filters: certificateFiltersSchema.optional(),
+});
+
+const cryptoproSigningSchema = cryptoproSchema.extend({
+  tsp_address: z.string().trim().min(1),
 });
 
 export function isSupportedSigningMode({
@@ -139,7 +143,7 @@ export const checkScreenSchema = z.object({
     test_document: testDocumentSchema,
     buttons: screenButtonsSchema,
   }),
-  cryptopro: cryptoproSchema.optional(),
+  cryptopro: cryptoproSigningSchema,
 });
 
 // --- SIGNING
@@ -158,10 +162,21 @@ export const signingScreenSchema = z.object({
     title: z.string(),
     message: z.string(),
     step: z.string().optional(),
-    lists: z.object({ documents: z.array(signingDocumentSchema) }),
+    lists: z.object({
+      documents: z
+        .array(signingDocumentSchema)
+        .nonempty()
+        .refine((documents) => {
+          const ids = documents.map(({ id }) => id);
+          return (
+            ids.every((id) => id.trim().length > 0) &&
+            new Set(ids).size === ids.length
+          );
+        }, 'Документам нужны уникальные непустые id'),
+    }),
     buttons: screenButtonsSchema,
   }),
-  cryptopro: cryptoproSchema.optional(),
+  cryptopro: cryptoproSigningSchema,
 });
 
 // --- STATUS: ERROR сейчас не используется, но может прийти.

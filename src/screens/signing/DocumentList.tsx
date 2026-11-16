@@ -24,19 +24,23 @@ export function DocumentList({
               <strong>{documentTitle}</strong>
               <div className={styles.detail}>{format}</div>
             </div>
-            {pendingDocumentId === id ? (
-              <Loading>Загружаем документ</Loading>
-            ) : (
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={blocked || !onOpenDocument}
-                aria-label={'Открыть документ «' + documentTitle + '»'}
-                onClick={() => onOpenDocument?.(id)}
-              >
-                Открыть документ
-              </button>
-            )}
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={
+                !onOpenDocument || (blocked && pendingDocumentId !== id)
+              }
+              aria-disabled={pendingDocumentId === id || undefined}
+              aria-label={'Открыть документ «' + documentTitle + '»'}
+              onClick={(event) => {
+                if (blocked) return;
+                event.currentTarget.focus();
+                onOpenDocument?.(id);
+              }}
+            >
+              Открыть документ
+            </button>
+            {pendingDocumentId === id && <Loading>Загружаем документ</Loading>}
           </li>
         ))}
       </ul>

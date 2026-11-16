@@ -1,0 +1,34 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  --text: #182230;
+  --muted: #4c5a71;
+  --surface: #fff;
+  --border: #d6deea;
+  --accent: #244fba;
+  color: var(--text);
+  background: #f3f6fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 3px solid #5479d2;
+  outline-offset: 3px;
+}

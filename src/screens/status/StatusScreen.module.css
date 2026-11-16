@@ -1,0 +1,32 @@
+.level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  margin-bottom: 1rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.level[data-level='SUCCESS'] {
+  background: #e3f4e9;
+  color: #14603a;
+}
+
+.level[data-level='WARNING'] {
+  background: #fff2d5;
+  color: #714700;
+}
+
+.level[data-level='ERROR'] {
+  background: #fce9ec;
+  color: #8f243a;
+}
+
+.requestId {
+  margin: 1rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}

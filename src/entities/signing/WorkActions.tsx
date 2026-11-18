@@ -1,54 +1,53 @@
 import Button from '@sber-site/malachite-kit/esm/components/Button';
+import { Link } from '@sber-site/malachite-kit';
 import type { ScreenButtons } from '../../shared/api';
 import { httpUrl } from '../../shared/lib/httpUrl';
-import * as css from '../../shared/ui/Screen.css';
 export function WorkActions({
   buttons,
   busy,
+  isLoading = false,
   onAction,
+  className,
 }: {
   buttons: ScreenButtons;
   busy: boolean;
+  isLoading?: boolean;
   onAction?: () => void;
+  className?: string;
 }) {
-  useStyles(css);
   const secondary = buttons.secondary;
-  let secondaryAction;
-  if (secondary) {
-    let url: string | undefined;
-    if (secondary.process === undefined && secondary.url) {
-      url = httpUrl(secondary.url);
-    }
-    if (url && !busy) {
-      secondaryAction = (
-        <a
-          className="secondary"
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {secondary.message}
-        </a>
-      );
-    } else {
-      secondaryAction = (
-        <Button type="button" className="secondary" disabled>
-          {secondary.message}
-        </Button>
-      );
-    }
-  }
+  const url =
+    secondary?.process === undefined && secondary?.url
+      ? httpUrl(secondary.url)
+      : undefined;
   return (
-    <div className="actions">
+    <>
       <Button
         type="button"
-        className="primary"
+        theme="primary"
+        size="large"
+        className={className}
         disabled={busy || !onAction}
+        isLoading={isLoading}
         onClick={onAction}
       >
         {buttons.accent.message}
       </Button>
-      {secondaryAction}
-    </div>
+      {secondary &&
+        (url && !busy ? (
+          <Link
+            theme="secondary"
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {secondary.message}
+          </Link>
+        ) : (
+          <Button type="button" theme="secondary" size="large" disabled>
+            {secondary.message}
+          </Button>
+        ))}
+    </>
   );
 }

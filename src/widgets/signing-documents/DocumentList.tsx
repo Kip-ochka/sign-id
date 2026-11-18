@@ -1,7 +1,6 @@
 import type { SigningDocument } from '../../shared/api';
-import { Loading } from '../../shared/ui/Loading';
 import { DocumentLink } from '../../shared/ui/DocumentLink';
-import * as css from '../../shared/ui/Screen.css';
+import * as css from './DocumentList.css';
 export function DocumentList({
   documents,
   blocked,
@@ -15,41 +14,33 @@ export function DocumentList({
 }) {
   useStyles(css);
   return (
-    <section className="section" aria-labelledby="documents-title">
-      <h2 id="documents-title">Документы</h2>
+    <div className="sign_signing__document-wrapper" aria-label="Документы">
       {documents.length === 0 && <p>Нет документов для подписания.</p>}
-      <ul className="list">
-        {documents.map(({ id, title, format }) => {
-          const normalized = format.toUpperCase().replace(/^\./, '');
-          let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';
-          if (normalized === 'PDF') {
-            kind = 'PDF';
-          }
-          if (normalized === 'DOC' || normalized === 'DOCX') {
-            kind = 'DOC';
-          }
-          return (
-            <li key={id}>
-              <DocumentLink
-                format={kind}
-                title={title}
-                disabled={
-                  !onOpenDocument || (blocked && pendingDocumentId !== id)
-                }
-                pending={pendingDocumentId === id}
-                onClick={() => {
-                  if (!blocked) {
-                    onOpenDocument?.(id);
-                  }
-                }}
-              />
-              {pendingDocumentId === id && (
-                <Loading>Загружаем документ</Loading>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+
+      {documents.map(({ id, title, format }) => {
+        const normalized = format.toUpperCase().replace(/^\./, '');
+        let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';
+        if (normalized === 'PDF') {
+          kind = 'PDF';
+        }
+        if (normalized === 'DOC' || normalized === 'DOCX') {
+          kind = 'DOC';
+        }
+        return (
+          <DocumentLink
+            key={id}
+            format={kind}
+            title={title}
+            disabled={!onOpenDocument || (blocked && pendingDocumentId !== id)}
+            pending={pendingDocumentId === id}
+            onClick={() => {
+              if (!blocked) {
+                onOpenDocument?.(id);
+              }
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }

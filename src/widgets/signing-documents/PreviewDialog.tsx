@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import * as css from '../../shared/ui/Screen.css';
-import * as localCss from './PreviewDialog.css';
+import Button from '@sber-site/malachite-kit/esm/components/Button';
+import { Link } from '@sber-site/malachite-kit';
 export type DocumentPreview = {
   title: string;
   url: string;
@@ -8,6 +8,7 @@ export type DocumentPreview = {
   kind?: 'image' | 'pdf';
 };
 
+// TODO: подключить готовый дизайн просмотра документов; сейчас это функциональная заглушка.
 export function PreviewDialog({
   file,
   close,
@@ -15,10 +16,8 @@ export function PreviewDialog({
   file: DocumentPreview;
   close: () => void;
 }) {
-  useStyles(css);
-  useStyles(localCss);
   const dialog = useRef<HTMLDialogElement>(null);
-  const download = useRef<HTMLAnchorElement>(null);
+  const download = useRef<HTMLDivElement>(null);
   const [renderFailed, setRenderFailed] = useState(false);
   const pdfUnavailable = file.kind === 'pdf' && !navigator.pdfViewerEnabled;
   useEffect(() => {
@@ -34,14 +33,13 @@ export function PreviewDialog({
   }, []);
   useEffect(() => {
     if (!file.kind) {
-      download.current?.click();
+      download.current?.querySelector('a')?.click();
     }
   }, [file.kind]);
 
   return (
     <dialog
       ref={dialog}
-      className="preview"
       aria-labelledby="preview-title"
       onCancel={(event) => {
         event.preventDefault();
@@ -49,18 +47,15 @@ export function PreviewDialog({
       }}
     >
       <h2 id="preview-title">{file.title}</h2>
-      <div className="actions">
-        <button type="button" className="primary" onClick={close}>
+      <div>
+        <Button type="button" theme="primary" size="large" onClick={close}>
           {file.kind ? 'Закрыть просмотр' : 'Закрыть'}
-        </button>
-        <a
-          ref={download}
-          className="secondary"
-          href={file.url}
-          download={file.filename}
-        >
-          Скачать документ
-        </a>
+        </Button>
+        <div ref={download}>
+          <Link theme="secondary" href={file.url} download={file.filename}>
+            Скачать документ
+          </Link>
+        </div>
       </div>
       {(renderFailed || pdfUnavailable) && (
         <p role="status">Просмотр недоступен. Скачайте документ.</p>

@@ -1,7 +1,6 @@
 import Select from '@sber-site/malachite-kit/esm/components/Select';
-import { useState } from 'react';
-import { Loading } from '../../shared/ui/Loading';
-import * as css from '../../shared/ui/Screen.css';
+import Text from '@sber-site/sbercraft-nova-kit/components/Text';
+import { useRef, useState } from 'react';
 export type CertificateOption = {
   id: string;
   title: string;
@@ -9,73 +8,56 @@ export type CertificateOption = {
   serial: string;
   expires?: string;
 };
-
 export type CertificateList =
-  | { status: 'unavailable' | 'loading' }
+  | { status: 'unavailable' }
+  | { status: 'loading' }
   | { status: 'loaded'; options: readonly CertificateOption[] };
-
 export function CertificatePicker({
   certificates,
   selected,
   onSelect,
   busy,
+  className,
 }: {
   certificates: CertificateList;
   selected?: CertificateOption;
   onSelect: (id: string) => void;
   busy: boolean;
+  className?: string;
 }) {
-  useStyles(css);
+  const ref = useRef<HTMLInputElement>(null);
+  if (certificates.status === 'unavailable') {
+    return <Text>Подключение сертификатов пока недоступно.</Text>;
+  }
+  if (certificates.status === 'loading') {
+    return <Text role="status">Ищем сертификаты</Text>;
+  }
+  if (certificates.options.length === 0) {
+    return <Text role="alert">Подходящие сертификаты не найдены.</Text>;
+  }
   return (
-    <section className="section" aria-labelledby="certificate-title">
-      <h2 id="certificate-title">Сертификат</h2>
-      {certificates.status === 'unavailable' && (
-        <p className="detail">Подключение сертификатов пока недоступно.</p>
-      )}
-      {certificates.status === 'loading' && <Loading>Ищем сертификаты</Loading>}
-      {certificates.status === 'loaded' && (
-        <>
-          {certificates.options.length === 0 && (
-            <p role="alert">Подходящие сертификаты не найдены.</p>
-          )}
-          {certificates.options.length > 0 && (
-            <label className="field">
-              <span>Выберите сертификат</span>
-              <Select
-                aria-label="Выберите сертификат"
-                value={selected?.id ?? ''}
-                disabled={busy}
-                onChange={(event) => onSelect(event.target.value)}
-                placeholder="Выберите сертификат"
-                data={certificates.options.map(
-                  ({ id, title, organization, serial }) => ({
-                    id,
-                    value: id,
-                    text: [title, organization, serial]
-                      .filter(Boolean)
-                      .join(' · '),
-                  }),
-                )}
-              />
-            </label>
-          )}
-          {selected && (
-            <div className="certificate">
-              <strong>{selected.title}</strong>
-              {selected.organization && (
-                <div className="detail">{selected.organization}</div>
-              )}
-              {selected.expires && (
-                <div className="detail">Действует до {selected.expires}</div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </section>
+    <Select
+      className={className}
+      autoFocus={false}
+      name="certificate"
+      required={false}
+      inputRef={ref}
+      autoComplete="none"
+      aria-label="Выберите сертификат"
+      value={selected?.id ?? ''}
+      disabled={busy}
+      onChange={(event: { target: { value: string } }) =>
+        onSelect(event.target.value)
+      }
+      placeholder="Выберите сертификат"
+      data={certificates.options.map(({ id, title, organization, serial }) => ({
+        id,
+        value: id,
+        text: [title, organization, serial].filter(Boolean).join(' · '),
+      }))}
+    />
   );
 }
-
 export function useSelectedCertificate(certificates: CertificateList) {
   const [selectedId, selectCertificate] = useState('');
   const options = certificates.status === 'loaded' ? certificates.options : [];
@@ -85,7 +67,6 @@ export function useSelectedCertificate(certificates: CertificateList) {
       : options.find(({ id }) => id === selectedId);
   return { selected, selectCertificate };
 }
-
 export type SignatureControls = {
   certificates: CertificateList;
   busy: boolean;

@@ -1,48 +1,17 @@
-import { Link } from '@sber-site/malachite-kit';
-import * as css from '../../shared/ui/Screen.css';
-import type { CheckScreen as CheckResponse, Consent } from '../../shared/api';
+import * as css from './TestSignature.css';
+import type { CheckScreen as CheckResponse } from '../../shared/api';
 import {
   CertificatePicker,
   useSelectedCertificate,
 } from '../../entities/signing';
 import type { SignatureControls } from '../../entities/signing';
-import { httpUrl } from '../../shared/lib/httpUrl';
-import { Loading } from '../../shared/ui/Loading';
-import { ScreenCard } from '../../shared/ui/ScreenCard';
-import { WorkActions } from '../../entities/signing';
-function ConsentText({ consent }: { consent: Consent }) {
-  useStyles(css);
-  const url = httpUrl(consent.url);
-  if (!url || !consent.hypertext) {
-    return <p className="agreement">{consent.text}</p>;
-  }
-  const start = consent.text.indexOf(consent.hypertext);
-  const link = (
-    <Link
-      theme="secondary"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {consent.hypertext}
-    </Link>
-  );
-  if (start < 0) {
-    return (
-      <p className="agreement">
-        {consent.text} {link}
-      </p>
-    );
-  }
-  return (
-    <p className="agreement">
-      {consent.text.slice(0, start)}
-      {link}
-      {consent.text.slice(start + consent.hypertext.length)}
-    </p>
-  );
-}
+import { ConsentText } from './ConsentText';
+import Heading from '@sber-site/sbercraft-nova-kit/components/Heading';
+import Text from '@sber-site/sbercraft-nova-kit/components/Text';
+import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
+import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 
+import { WorkActions } from '../../entities/signing';
 export function TestSignature({
   response,
   certificates,
@@ -53,6 +22,8 @@ export function TestSignature({
   response: CheckResponse;
   phase?: 'signing' | 'sending';
 }) {
+  useStyles(css);
+  const { isDesktop } = useBreakpoints();
   const { selected, selectCertificate } = useSelectedCertificate(certificates);
   const { title, message, buttons, consent } = response.screen;
   const blocked = busy || certificates.status === 'loading';
@@ -61,22 +32,34 @@ export function TestSignature({
     sign = () => onSign(selected);
   }
   return (
-    <ScreenCard title={title} message={message}>
-      <CertificatePicker
-        certificates={certificates}
-        selected={selected}
-        onSelect={selectCertificate}
-        busy={blocked}
-      />
-      {phase && (
-        <Loading>
-          {phase === 'sending'
-            ? 'Отправляем тестовую подпись'
-            : 'Выполняем тестовую подпись'}
-        </Loading>
-      )}
-      <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
-      <ConsentText consent={consent} />
-    </ScreenCard>
+    <ContentWrapper>
+      <div className="sign_check">
+        <div className="sign_check__main">
+          <Heading
+            tag="h1"
+            size={isDesktop ? 'h2' : 'h3'}
+            className="sign_check__heading"
+          >
+            {title}
+          </Heading>
+          <Text className="sign_check__subheading">{message}</Text>
+          <CertificatePicker
+            className="sign_check__select"
+            certificates={certificates}
+            selected={selected}
+            onSelect={selectCertificate}
+            busy={blocked}
+          />
+        </div>
+        <WorkActions
+          className="sign_check__button-secondary"
+          buttons={buttons}
+          busy={blocked}
+          isLoading={busy || phase !== undefined}
+          onAction={sign}
+        />
+        <ConsentText consent={consent} />
+      </div>
+    </ContentWrapper>
   );
 }

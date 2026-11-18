@@ -4,8 +4,12 @@ import {
   useSelectedCertificate,
 } from '../../entities/signing';
 import type { SignatureControls } from '../../entities/signing';
-import { Loading } from '../../shared/ui/Loading';
-import { ScreenCard } from '../../shared/ui/ScreenCard';
+import Heading from '@sber-site/sbercraft-nova-kit/components/Heading';
+import Text from '@sber-site/sbercraft-nova-kit/components/Text';
+import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
+import { ContentWrapper } from '../../shared/ui/ContentWrapper';
+import Typography from '@sber-site/malachite-kit/esm/components/Typography';
+import * as css from './SigningScreen.css';
 import { WorkActions } from '../../entities/signing';
 import { DocumentList } from './DocumentList';
 import { PreviewDialog } from './PreviewDialog';
@@ -31,6 +35,8 @@ export function SigningScreen({
   preview?: DocumentPreview;
   closePreview?: () => void;
 }) {
+  useStyles(css);
+  const { isDesktop } = useBreakpoints();
   const { selected, selectCertificate } = useSelectedCertificate(certificates);
   const {
     title,
@@ -49,30 +55,51 @@ export function SigningScreen({
   }
 
   return (
-    <ScreenCard title={title} message={message} step={step}>
-      <CertificatePicker
-        certificates={certificates}
-        selected={selected}
-        onSelect={selectCertificate}
-        busy={blocked}
-      />
-      <DocumentList
-        documents={documents}
-        blocked={blocked}
-        pendingDocumentId={pendingDocumentId}
-        onOpenDocument={onOpenDocument}
-      />
-      {phase && (
-        <Loading>
-          {phase === 'sending'
-            ? 'Отправляем подписанные документы'
-            : 'Выполняем подписание'}
-        </Loading>
-      )}
-      <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
-      {preview && closePreview && (
-        <PreviewDialog key={preview.url} file={preview} close={closePreview} />
-      )}
-    </ScreenCard>
+    <ContentWrapper>
+      <div className="sign_signing">
+        <div className="sign_signing__main">
+          {step && (
+            <div className="sign_signinig_stepper">
+              <Typography.Paragraph>{step}</Typography.Paragraph>
+            </div>
+          )}
+          <Heading
+            tag="h1"
+            size={isDesktop ? 'h2' : 'h3'}
+            className="sign_signing__heading"
+          >
+            {title}
+          </Heading>
+          <Text className="sign_signing__subheading">{message}</Text>
+          <CertificatePicker
+            className="sign_signing__select"
+            certificates={certificates}
+            selected={selected}
+            onSelect={selectCertificate}
+            busy={blocked}
+          />
+          <DocumentList
+            documents={documents}
+            blocked={blocked}
+            pendingDocumentId={pendingDocumentId}
+            onOpenDocument={onOpenDocument}
+          />
+        </div>
+        <WorkActions
+          className="sign_signing__button-secondary"
+          buttons={buttons}
+          busy={blocked}
+          isLoading={busy || phase !== undefined}
+          onAction={sign}
+        />
+        {preview && closePreview && (
+          <PreviewDialog
+            key={preview.url}
+            file={preview}
+            close={closePreview}
+          />
+        )}
+      </div>
+    </ContentWrapper>
   );
 }

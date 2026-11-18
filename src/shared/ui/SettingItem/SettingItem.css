@@ -1,0 +1,92 @@
+.sign_setting-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+}
+
+.sign_setting-item__main {
+  --item-background-color: rgba(0, 0, 0, 0.04);
+  --item-border-color: transparent;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1;
+  border-radius: 8px;
+  background-color: var(--item-background-color);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--item-border-color);
+}
+
+.sign_setting-item__error {
+  --item-background-color-error: rgba(227, 85, 2, 0.08);
+  --item-border-color-error: rgba(227, 85, 2, 1);
+  background-color: var(--item-background-color-error);
+  border: 1px solid var(--item-border-color-error);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.sign_setting-item__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.sign_setting-item__main-text {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sign_settings-item__error-button {
+  --error-button-bgcolor: rgba(255, 255, 255, 1);
+  --error-button-textcolor: rgba(16, 127, 140, 1);
+  --error-button-fsize: 12px;
+  height: 32px;
+  color: var(--error-button-textcolor);
+  background-color: var(--error-button-bgcolor);
+  border-radius: 30px;
+  padding: 8px 12px;
+  font-size: var(--error-button-fsize);
+  line-height: 16px;
+  font-family: 'SB Sans Text', sans-serif;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.sign_settings-item__error-button:hover:focus {
+  --error-button-bgcolor: rgba(255, 255, 255, 0.7);
+  background-color: var(--error-button-bgcolor);
+}
+
+.sign_setting-item__error-text {
+  --error-button-fsize: 12px;
+  --setting-error-color: rgba(227, 85, 2, 1);
+  color: var(--setting-error-color);
+  font-size: var(--error-button-fsize);
+  line-height: 16px;
+  padding: 4px 0 0 20px;
+}
+
+@media (min-width: 1024px) {
+  .sign_setting-item__main {
+    padding: 16px 12px;
+  }
+}

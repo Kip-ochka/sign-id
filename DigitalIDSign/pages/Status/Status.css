@@ -1,0 +1,8 @@
+.sign_status {
+    display: flex;
+    flex-direction: column;
+    align-items: safe center;
+    justify-content: safe center;
+    width: 100%;
+    box-sizing: border-box;
+}

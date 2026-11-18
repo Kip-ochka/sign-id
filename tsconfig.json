@@ -14,5 +14,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "vite.config.ts"],
-  "exclude": ["src/shared/vendor", "src/**/*.test.ts", "src/**/__tests__"]
+  "exclude": ["src/**/*.test.ts", "src/**/__tests__"]
 }

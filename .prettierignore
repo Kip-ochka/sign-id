@@ -16,3 +16,5 @@ API_TESTING.md
 ERRORS_REFERENCE.md
 jest.config.js
 mock-server.mjs
+
+DigitalIDSign/

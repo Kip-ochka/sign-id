@@ -55,26 +55,40 @@ export const createCertificateFiles = (
 export const createJSONPart = (value: unknown): Blob =>
   new Blob([JSON.stringify(value)], { type: 'application/json' });
 
+function omitBlankFields(fields?: Record<string, string | undefined>) {
+  const entries = Object.entries(fields ?? {}).filter(([, value]) =>
+    value?.trim(),
+  );
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
 export const createStateFormData = (
   event: 'check' | 'signing',
-  body: CheckStateRequest | SigningStateRequest,
+  body: CheckStateRequest | SigningStateRequest | undefined,
   { signatures, certificates }: StateFiles,
 ): FormData => {
-  // Копируем DTO перед удалением файловых полей, которые могли прийти сверх типа.
-  const request: typeof body & { signatures?: unknown } = {
-    ...body,
-    certificates: body.certificates.map((certificate) => {
-      const metadata: typeof certificate & { certificate_base64?: Base64 } = {
-        ...certificate,
-      };
-      delete metadata.certificate_base64;
-      return metadata;
-    }),
-  };
-  delete request.signatures;
-
   const formData = new FormData();
-  formData.append('request', createJSONPart(request));
+  if (body) {
+    // Копируем DTO перед удалением файловых полей, которые могли прийти сверх типа.
+    const request: typeof body & { signatures?: unknown } = { ...body };
+    delete request.signatures;
+    request.certificates = body.certificates?.map((certificate) => {
+      const metadata: typeof certificate & {
+        certificate_base64?: Base64;
+      } = { ...certificate };
+      delete metadata.certificate_base64;
+      return {
+        ...metadata,
+        expires_at: metadata.expires_at?.trim()
+          ? metadata.expires_at
+          : undefined,
+        person: omitBlankFields(metadata.person),
+        organization: omitBlankFields(metadata.organization),
+        issuer: omitBlankFields(metadata.issuer),
+      };
+    });
+    formData.append('request', createJSONPart(request));
+  }
   for (const signature of signatures) {
     const file =
       event === 'check' ? createCheckSignature(signature.base64) : signature;

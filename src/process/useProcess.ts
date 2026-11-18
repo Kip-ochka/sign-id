@@ -1,11 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { prepareCheck } from '../screens/check/prepareCheck';
-import {
-  checkCsp,
-  checkWorkplace,
-  getSettingStages,
-} from '../screens/setting/checkWorkplace';
+import { checkCsp, checkWorkplace } from '../screens/setting/checkWorkplace';
 import type {
   SettingStage,
   WorkplaceResult,
@@ -45,6 +41,7 @@ function resetProcess(
   const next = initialState(previous.inquiryId);
   return {
     ...showScreen({ ...next, screen: previous.screen }, screen),
+    session: previous.session === null ? null : undefined,
     busy,
   };
 }
@@ -70,11 +67,11 @@ export function useProcess(
   const showError = useCallback(
     async (
       key: string | undefined,
-      signal: AbortSignal,
+      options: RequestOptions,
       requestId?: string,
     ) => {
-      const screen = await loadErrorScreen(key, signal);
-      if (!signal.aborted) {
+      const screen = await loadErrorScreen(key, options);
+      if (!options.signal.aborted) {
         setState((previous) =>
           showScreen(previous, { ...screen }, requestId, key),
         );
@@ -84,8 +81,8 @@ export function useProcess(
   );
 
   const showSetupError = useCallback(
-    (code: string, signal: AbortSignal) => {
-      if (signal.aborted) return;
+    (code: string, options: RequestOptions) => {
+      if (options.signal.aborted) return;
       if (code === 'CSP_VERSION_TOO_LOW') {
         setState((previous) =>
           showScreen(previous, {
@@ -100,14 +97,15 @@ export function useProcess(
         );
         return;
       }
-      return showError(getCryptoErrorKey(code, 'setup'), signal);
+      return showError(getCryptoErrorKey(code, 'setup'), options);
     },
     [showError],
   );
 
   // Вход и BACK всегда загружают актуальную выборку сертификатов.
   const openSignatureScreen = useCallback(
-    async (screen: CheckScreen | SigningScreen, signal: AbortSignal) => {
+    async (screen: CheckScreen | SigningScreen, options: RequestOptions) => {
+      const { signal } = options;
       setState((previous) => showScreen(previous, screen));
       try {
         if (screen.process === 'SIGNING') {
@@ -121,10 +119,10 @@ export function useProcess(
         );
         if (signal.aborted) return;
         if (!signatureCertificates.length)
-          return showSetupError('NO_CERT', signal);
+          return showSetupError('NO_CERT', options);
         setState((previous) => ({ ...previous, signatureCertificates }));
       } catch (error) {
-        await showSetupError(getCryptoErrorCode(error), signal);
+        await showSetupError(getCryptoErrorCode(error), options);
       }
     },
     [showSetupError],
@@ -157,13 +155,16 @@ export function useProcess(
         const screen = data.response;
         if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
           setState((previous) => saveResponse(previous, screen));
-          await openSignatureScreen(screen, signal);
+          await openSignatureScreen(screen, options);
           return;
         }
         if (screen.process === 'SETTING') {
-          const stages = getSettingStages(screen);
-          if (stages.length === 0 || readySent) {
-            setState(showFallback);
+          // ready по кэшу использует новую сессию в той же операции.
+          options.session = screen.session;
+          if (readySent) {
+            setState((previous) =>
+              showFallback(saveResponse(previous, screen)),
+            );
             return;
           }
           // Сохраняем session, оставляя текущий экран до решения по кэшу.
@@ -174,7 +175,7 @@ export function useProcess(
           }));
           let cached = false;
           try {
-            cached = await settingCache.has(inquiryId, stages);
+            cached = await settingCache.has(inquiryId);
           } catch {
             // Если кэш недоступен, открываем SETTING для ручной проверки.
           }
@@ -201,32 +202,45 @@ export function useProcess(
 
   // Сначала получаем настройки, чтобы уже запрос start использовал их для retry.
   const handleStart = useCallback(
-    async (signal: AbortSignal) => {
-      const settings = await loadSettings(signal);
-      signal.throwIfAborted();
+    async (options: RequestOptions) => {
+      if (options.session !== null) options.session = '';
+      const settings = await loadSettings(options);
+      options.signal.throwIfAborted();
+      options.settings = settings;
       setState((previous) => ({ ...previous, settings }));
-      const options = { inquiryId, settings, signal };
       const reply = await requestStart(options);
       await applyResponse(reply, options);
     },
-    [applyResponse, inquiryId],
+    [applyResponse],
   );
 
   // Общий запуск команд: управляет busy, отменой и обработкой сетевых ошибок.
   const run = useCallback(
-    async <T>(handleRequest: (signal: AbortSignal) => Promise<T>) => {
+    async <T>(handleRequest: (options: RequestOptions) => Promise<T>) => {
       // Блокируем двойной клик сразу. busy нужен для отображения в React.
       if (!inquiryId || activeRequest.current) return;
       const controller = new AbortController();
       const { signal } = controller;
+      const options: RequestOptions = {
+        inquiryId,
+        settings: state.settings,
+        session: state.session === undefined ? '' : state.session,
+        signal,
+        onUnauthorized: () => {
+          if (signal.aborted) return;
+          options.session = null;
+          setState((previous) => ({ ...previous, session: null }));
+        },
+      };
       activeRequest.current = controller;
       setState((previous) => ({ ...previous, busy: true }));
-      let request: (signal: AbortSignal) => Promise<T | void> = handleRequest;
+      let request: (options: RequestOptions) => Promise<T | void> =
+        handleRequest;
 
       try {
         while (!signal.aborted) {
           try {
-            const result = await request(signal);
+            const result = await request(options);
             if (!signal.aborted) return result;
           } catch (error) {
             if (signal.aborted) return;
@@ -249,7 +263,7 @@ export function useProcess(
                 settings: previous.settings,
               }));
             }
-            await showError(error.key, signal, error.requestId);
+            await showError(error.key, options, error.requestId);
             return;
           }
         }
@@ -264,7 +278,7 @@ export function useProcess(
         }
       }
     },
-    [handleStart, inquiryId, showError],
+    [handleStart, inquiryId, showError, state.session, state.settings],
   );
 
   const start = useCallback(() => {
@@ -285,7 +299,7 @@ export function useProcess(
       if (!backScreen) return restart();
       stop();
       if (backScreen.process === 'CHECK' || backScreen.process === 'SIGNING') {
-        return run((signal) => openSignatureScreen(backScreen, signal));
+        return run((options) => openSignatureScreen(backScreen, options));
       }
       setState((previous) =>
         showScreen({ ...previous, busy: false }, backScreen),
@@ -306,11 +320,10 @@ export function useProcess(
   };
 
   const checkSetting = () => {
-    const { screen, settings } = state;
+    const { screen } = state;
     if (screen.process !== 'SETTING') return;
-    const stages = getSettingStages(screen);
-    if (stages.length === 0) return;
-    return run(async (signal) => {
+    return run(async (options) => {
+      const { signal } = options;
       setState((previous) => ({
         ...previous,
         settingProgress: undefined,
@@ -322,21 +335,25 @@ export function useProcess(
           settingProgress: { ...previous.settingProgress, [stage]: result },
         }));
       const result = await checkWorkplace(
-        screen,
-        stages,
         signal,
         (stage, progress) => update(stage, { state: progress }),
-        (stage, error) =>
-          update(stage, { state: 'ERROR', code: getCryptoErrorCode(error) }),
+        async (stage, error) => {
+          const code = getCryptoErrorCode(error);
+          update(stage, { state: 'ERROR', code });
+          if (
+            !screen.screen.lists?.testing?.some(({ name }) => name === stage)
+          ) {
+            await showSetupError(code, options);
+          }
+        },
       );
       if (!result || signal.aborted) return;
 
-      settingCache.save(inquiryId, stages);
+      settingCache.save(inquiryId);
       setState((previous) => ({
         ...previous,
         workplaceCertificates: result.certificates,
       }));
-      const options = { inquiryId, settings, signal };
       const reply = await requestReady(options);
       await applyResponse(reply, options, true);
     });
@@ -345,7 +362,7 @@ export function useProcess(
   const showSettingError = (stage: SettingStage) => {
     const result = state.settingProgress?.[stage];
     if (state.screen.process !== 'SETTING' || result?.state !== 'ERROR') return;
-    return run(async (signal) => showSetupError(result.code, signal));
+    return run(async (options) => showSetupError(result.code, options));
   };
 
   async function handleCheck(
@@ -370,7 +387,8 @@ export function useProcess(
   ) => {
     const { process } = state.screen;
     if (process !== 'CHECK' && process !== 'SIGNING') return;
-    return run(async (signal) => {
+    return run(async (options) => {
+      const { signal } = options;
       let signed: SignedEvent;
       try {
         signed = await prepare(signal);
@@ -378,13 +396,12 @@ export function useProcess(
         if (!signal.aborted) {
           await showError(
             getCryptoErrorKey(getCryptoErrorCode(error), 'signing'),
-            signal,
+            options,
           );
         }
         return;
       }
       signal.throwIfAborted();
-      const options = { inquiryId, settings: state.settings, signal };
       setState((previous) => ({ ...previous, signaturePhase: 'sending' }));
       if (process === 'CHECK' && signed.event === 'check') {
         await handleCheck(signed, options);
@@ -408,29 +425,23 @@ export function useProcess(
     return submitSignature((signal) => {
       setState((previous) => ({ ...previous, signaturePhase: 'signing' }));
       return screen.process === 'CHECK'
-        ? prepareCheck(screen, thumbprint)
+        ? prepareCheck(screen, thumbprint, signal)
         : prepareSigning(screen, thumbprint, signal);
     });
   };
 
   const downloadDocument = (documentId: string) => {
-    const { screen, settings } = state;
+    const { screen } = state;
     if (
       screen.process !== 'SIGNING' ||
       !screen.screen.lists.documents.some(({ id }) => id === documentId)
     )
       return;
-    return run((signal) =>
-      requestDocument(documentId, {
-        inquiryId,
-        settings,
-        signal,
-      }),
-    );
+    return run((options) => requestDocument(documentId, options));
   };
 
   const reportCryptoError = (code: string, stage: 'setup' | 'signing') =>
-    run((signal) => showError(getCryptoErrorKey(code, stage), signal));
+    run((options) => showError(getCryptoErrorKey(code, stage), options));
 
   return {
     state,

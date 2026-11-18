@@ -321,8 +321,8 @@ describe('поиск сертификатов', () => {
     }
     mockSigning();
     const { certificate: metadata } = await signHash({ ...input, filters });
-    expect(metadata.person.first_name).toBe('Иван  Иванович');
-    expect(metadata.person.middle_name).toBe('');
+    expect(metadata.person?.first_name).toBe('Иван  Иванович');
+    expect(metadata.person).not.toHaveProperty('middle_name');
   });
 });
 
@@ -403,9 +403,9 @@ describe('отсоединённая подпись одного готовог�
     expect(signed.SignHash).toHaveBeenCalledWith(data, signer, 0x5);
   });
 
-  test('заполняет пустыми строками отсутствующие реквизиты для REST', async () => {
+  test('возвращает только полученные непустые реквизиты для REST', async () => {
     const selected = certificate();
-    selected.subjectName = 'SN=Тестов, O=Тестовое ООО, INNLE=002';
+    selected.subjectName = 'SN=Тестов, G="  ", O=Тестовое ООО, INNLE=002';
     selected.issuerName = 'O=Тестовый УЦ';
     pluginCertificates.mockResolvedValue([selected]);
     mockSigning();
@@ -416,20 +416,13 @@ describe('отсоединённая подпись одного готовог�
     });
     expect(result.certificate.person).toEqual({
       last_name: 'Тестов',
-      first_name: '',
-      middle_name: '',
-      inn: '',
-      snils: '',
     });
     expect(result.certificate.organization).toEqual({
       name: 'Тестовое ООО',
       inn: '002',
-      ogrn: '',
     });
     expect(result.certificate.issuer).toEqual({
       name: 'Тестовый УЦ',
-      inn: '',
-      ogrn: '',
     });
   });
 

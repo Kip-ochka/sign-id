@@ -56,7 +56,7 @@ function readFields<K extends string>(
       ...(attributes.get(alias) ?? []),
     ]);
     const value = values.values().next().value;
-    if (values.size === 1 && value) fields[key] = value;
+    if (values.size === 1 && value?.trim()) fields[key] = value;
   }
   return fields;
 }

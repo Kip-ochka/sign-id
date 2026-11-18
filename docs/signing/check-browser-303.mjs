@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { promisify } from 'node:util';
 import { createServer as createViteServer } from 'vite';
@@ -31,8 +34,8 @@ const page = `<!doctype html><meta charset="utf-8"><pre id="result">pending</pre
     const initial = await state('start', body);
     const task = parseProcessResult(initial.data);
     if (!task.success || task.data.kind !== 'task') throw Error('Expected task');
-    const polled = await pollStatus({ ...body, ...task.data.response });
-    const redirected = await state('ready', body);
+    const polled = await pollStatus({ ...body, ...task.data.response }, undefined, null);
+    const redirected = await state('ready', body, undefined, 'synthetic-session');
     result.textContent = JSON.stringify({
       legacy,
       initial: { status: initial.status, task: task.data.response.task },
@@ -58,7 +61,12 @@ const server = createServer(async (request, response) => {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
   const body = chunks.length ? JSON.parse(chunks.join('')) : undefined;
-  requests.push({ method: request.method, path: request.url, body });
+  requests.push({
+    method: request.method,
+    path: request.url,
+    body,
+    session: request.headers['session-id'],
+  });
   const headers = { 'Content-Type': 'application/json' };
   if (request.url === `${api}/state/start`) {
     response.writeHead(303, headers).end('{"task":"synthetic-task"}');
@@ -73,6 +81,8 @@ const server = createServer(async (request, response) => {
   }
 });
 
+const profileRoot = resolve(tmpdir());
+const profile = await mkdtemp(join(profileRoot, 'signing-303-'));
 try {
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -86,6 +96,7 @@ try {
       '--disable-background-networking',
       '--disable-extensions',
       '--no-first-run',
+      '--user-data-dir=' + profile,
       '--dump-dom',
       '--virtual-time-budget=10000',
       `http://127.0.0.1:${server.address().port}/`,
@@ -102,6 +113,10 @@ try {
   });
   assert.equal(requests[2].body.task, 'synthetic-task');
   assert.deepEqual(
+    requests.slice(1).map(({ session }) => session),
+    ['', undefined, 'synthetic-session', 'synthetic-session'],
+  );
+  assert.deepEqual(
     requests.map(({ method, path }) => [method, path.slice(api.length)]),
     [
       ['POST', '/state/start'],
@@ -115,4 +130,6 @@ try {
 } finally {
   await vite.close();
   await new Promise((resolve) => server.close(resolve));
+  assert.equal(dirname(resolve(profile)), profileRoot);
+  await rm(profile, { recursive: true, force: true, maxRetries: 3 });
 }

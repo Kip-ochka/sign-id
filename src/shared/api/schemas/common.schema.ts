@@ -52,11 +52,11 @@ export const certificateSchema = z.object({
   type: z.literal('signed'),
   serial_number: z.string(),
   thumbprint: z.string(),
-  expires_at: isoDateTimeSchema,
+  expires_at: isoDateTimeSchema.optional(),
   certificate_base64: z.string(), // содержимое <serial_number>.b64, без PEM-заголовков
-  person: personSchema,
-  organization: organizationSchema,
-  issuer: issuerSchema,
+  person: personSchema.partial().optional(),
+  organization: organizationSchema.partial().optional(),
+  issuer: issuerSchema.partial().optional(),
 });
 
 // --- cryptopro: фильтры поиска — любое поле и любой вложенный объект может отсутствовать,
@@ -127,7 +127,9 @@ export const settingScreenSchema = z.object({
   screen: z.object({
     title: z.string(),
     message: z.string(),
-    lists: z.object({ testing: z.array(settingListSchema) }),
+    lists: z
+      .object({ testing: z.array(settingListSchema).optional() })
+      .optional(),
     buttons: screenButtonsSchema,
   }),
   cryptopro: cryptoproFiltersOnlySchema.optional(),

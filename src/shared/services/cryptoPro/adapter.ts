@@ -11,30 +11,34 @@ import { matchesCertificate, readCertificateNames } from './certificateNames';
 import { CryptoProError, cryptoOperation } from './error';
 
 type CertificateNames = ReturnType<typeof readCertificateNames>;
-type SigningMode = Pick<
-  Cryptopro,
-  'sign_type' | 'sign_format' | 'sign_position'
->;
+export type SigningCertificate = Omit<Certificate, 'certificate_base64'>;
+type SigningHashes = Partial<Pick<TestDocument, 'hash256' | 'hash512'>>;
 
 type HashSignatureParameters =
   | { profile: 'PKCS7'; tsaAddress?: never }
   | { profile: 'CADES_T' | 'CADES_X_LONG_TYPE_1'; tsaAddress: string };
 
+type SigningInput = {
+  thumbprint: string;
+  mode: Pick<Cryptopro, 'sign_type' | 'sign_format' | 'sign_position'>;
+  filters?: CertificateFilters;
+  parameters: HashSignatureParameters;
+};
+
 function readBase64(value: unknown, stage: 'certificate' | 'signing') {
-  // Плагин переносит строки Base64. Прочие символы и повреждённый padding означают ошибку.
+  // Плагин может переносить строки Base64.
   const base64 =
     typeof value === 'string' ? value.replace(/[\t \r\n]/g, '') : '';
   if (
-    !base64 ||
-    base64.length % 4 !== 0 ||
-    !base64Schema.safeParse(base64).success
+    base64 &&
+    base64.length % 4 === 0 &&
+    base64Schema.safeParse(base64).success
   ) {
-    throw new CryptoProError(stage, 'BASE64_ERROR');
-  }
-  try {
-    if (btoa(atob(base64)) === base64) return base64;
-  } catch (cause) {
-    throw new CryptoProError(stage, 'BASE64_ERROR', cause);
+    try {
+      if (btoa(atob(base64)) === base64) return base64;
+    } catch (cause) {
+      throw new CryptoProError(stage, 'BASE64_ERROR', cause);
+    }
   }
   throw new CryptoProError(stage, 'BASE64_ERROR');
 }
@@ -92,8 +96,6 @@ async function readCertificate(
   };
 }
 
-export type SigningCertificate = Awaited<ReturnType<typeof readCertificate>>;
-
 export async function findCertificates(filters?: CertificateFilters) {
   return cryptoOperation(
     'certificate',
@@ -118,10 +120,7 @@ export async function findCertificates(filters?: CertificateFilters) {
   );
 }
 
-function selectHash(
-  oid: string,
-  hashes: Partial<Pick<TestDocument, 'hash256' | 'hash512'>>,
-) {
+function selectHash(oid: string, hashes: SigningHashes) {
   // getAlgorithm читает OID открытого ключа, а не OID подписи издателя сертификата.
   const bits =
     oid === '1.2.643.7.1.1.1.1'
@@ -139,19 +138,11 @@ function selectHash(
   return { bits, hex: hash.data };
 }
 
-type SigningInput = {
-  thumbprint: string;
-  mode: SigningMode;
-  filters?: CertificateFilters;
-  parameters: HashSignatureParameters;
-};
-type SigningHashes = Partial<Pick<TestDocument, 'hash256' | 'hash512'>>;
-
-export async function signHash({
-  hashes,
-  ...input
-}: SigningInput & { hashes: SigningHashes }) {
-  const { signatures, certificate } = await signHashes(input, [hashes]);
+export async function signHash(
+  { hashes, ...input }: SigningInput & { hashes: SigningHashes },
+  signal?: AbortSignal,
+) {
+  const { signatures, certificate } = await signHashes(input, [hashes], signal);
   return { signatureBase64: signatures[0], certificate };
 }
 
@@ -203,16 +194,6 @@ export async function signHashes(
     'CERTIFICATE_EXPORT_FAILED',
     async () => ({
       ...(await readCertificate(certificate, names)),
-      person: {
-        last_name: '',
-        first_name: '',
-        middle_name: '',
-        inn: '',
-        snils: '',
-        ...names.person,
-      },
-      organization: { name: '', inn: '', ogrn: '', ...names.organization },
-      issuer: { name: '', inn: '', ogrn: '', ...names.issuer },
       certificate_base64: readBase64(
         await certificate.exportBase64(),
         'certificate',
@@ -234,7 +215,7 @@ export async function signHashes(
 async function signSelectedHash(
   certificate: PluginCertificate,
   hash: ReturnType<typeof selectHash>,
-  parameters: HashSignatureParameters,
+  parameters: SigningInput['parameters'],
   signal?: AbortSignal,
 ) {
   return cryptoOperation('signing', 'SIGN_HASH_FAILED', async () => {

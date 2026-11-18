@@ -37,15 +37,17 @@ function ProcessScreen() {
           id: certificate.thumbprint,
           title:
             [
-              certificate.person.last_name,
-              certificate.person.first_name,
-              certificate.person.middle_name,
+              certificate.person?.last_name,
+              certificate.person?.first_name,
+              certificate.person?.middle_name,
             ]
               .filter(Boolean)
               .join(' ') || certificate.serial_number,
-          organization: certificate.organization.name ?? '',
+          organization: certificate.organization?.name ?? '',
           serial: certificate.serial_number,
-          expires: new Date(certificate.expires_at).toLocaleDateString('ru-RU'),
+          expires: certificate.expires_at
+            ? new Date(certificate.expires_at).toLocaleDateString('ru-RU')
+            : '',
         })),
       }
     : { status: 'loading' };

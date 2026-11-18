@@ -1,14 +1,11 @@
-import type { SettingStage } from '../screens/setting/checkWorkplace';
+import { settingStages } from '../screens/setting/checkWorkplace';
 
 const storageKey = 'digital_id_sign';
 const ttl = 24 * 60 * 60 * 1000;
 
 export interface SettingCache {
-  has(
-    inquiryId: string,
-    stages: readonly SettingStage[],
-  ): boolean | Promise<boolean>;
-  save(inquiryId: string, stages: readonly SettingStage[]): void;
+  has(inquiryId: string): boolean | Promise<boolean>;
+  save(inquiryId: string): void;
 }
 
 export function createSettingCache(
@@ -17,10 +14,10 @@ export function createSettingCache(
     window.localStorage,
 ): SettingCache {
   return {
-    has(inquiryId, stages) {
+    has(inquiryId) {
       try {
         const device = getDevice?.();
-        if (!inquiryId || !device?.trim() || stages.length === 0) return false;
+        if (!inquiryId || !device?.trim()) return false;
         const raw = getStorage().getItem(storageKey);
         if (raw === null) return false;
         const entry = JSON.parse(raw) as unknown;
@@ -47,16 +44,16 @@ export function createSettingCache(
         const checkedStages = entry.stages;
         return (
           Array.isArray(checkedStages) &&
-          stages.every((stage) => checkedStages.includes(stage))
+          settingStages.every((stage) => checkedStages.includes(stage))
         );
       } catch {
         return false;
       }
     },
-    save(inquiryId, stages) {
+    save(inquiryId) {
       try {
         const device = getDevice?.();
-        if (!inquiryId || !device?.trim() || stages.length === 0) return;
+        if (!inquiryId || !device?.trim()) return;
         getStorage().setItem(
           storageKey,
           JSON.stringify({
@@ -64,7 +61,7 @@ export function createSettingCache(
             inquiry_id: inquiryId,
             device,
             checked_at: Date.now(),
-            stages,
+            stages: settingStages,
           }),
         );
       } catch {

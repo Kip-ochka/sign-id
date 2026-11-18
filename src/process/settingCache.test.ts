@@ -34,7 +34,7 @@ test.each([
       setItem: jest.fn(),
     }),
   );
-  expect(cache.has(record.inquiry_id, stages)).toBe(valid);
+  expect(cache.has(record.inquiry_id)).toBe(valid);
 });
 
 test.each([
@@ -43,6 +43,7 @@ test.each([
   'null',
   JSON.stringify({ ...record, version: 3 }),
   JSON.stringify({ ...record, stages: 'extension' }),
+  JSON.stringify({ ...record, stages: ['extension', 'certificate'] }),
   JSON.stringify({ ...record, checked_at: String(checkedAt) }),
   JSON.stringify({ ...record, checked_at: checkedAt + 0.5 }),
   JSON.stringify({ ...record, device: 'another-device' }),
@@ -55,10 +56,10 @@ test.each([
       setItem: jest.fn(),
     }),
   );
-  expect(cache.has(record.inquiry_id, stages)).toBe(false);
+  expect(cache.has(record.inquiry_id)).toBe(false);
 });
 
-test('кэш покрывает только успешно пройденные этапы', () => {
+test('кэш сохраняет полный набор проверок для текущей заявки', () => {
   const entries = new Map<string, string>([['digitalid_sign_inq', 'legacy']]);
   const cache = createSettingCache(
     () => record.device,
@@ -67,18 +68,11 @@ test('кэш покрывает только успешно пройденные
       setItem: (key, value) => entries.set(key, value),
     }),
   );
-  const checkedStages = ['extension', 'certificate'] as const;
-  expect(cache.has('legacy', checkedStages)).toBe(false);
-  cache.save(record.inquiry_id, checkedStages);
-  expect(JSON.parse(entries.get('digital_id_sign')!)).toEqual({
-    ...record,
-    stages: checkedStages,
-  });
-  expect(cache.has(record.inquiry_id, ['certificate'])).toBe(true);
-  expect(cache.has(record.inquiry_id, checkedStages)).toBe(true);
-  expect(cache.has(record.inquiry_id, stages)).toBe(false);
-  expect(cache.has('legacy', checkedStages)).toBe(false);
-  expect(cache.has('', checkedStages)).toBe(false);
+  cache.save(record.inquiry_id);
+  expect(JSON.parse(entries.get('digital_id_sign')!)).toEqual(record);
+  expect(cache.has(record.inquiry_id)).toBe(true);
+  expect(cache.has('legacy')).toBe(false);
+  expect(cache.has('')).toBe(false);
 });
 
 test('валидная запись версии 1 покрывает все три этапа', () => {
@@ -95,7 +89,7 @@ test('валидная запись версии 1 покрывает все т�
       setItem: jest.fn(),
     }),
   );
-  expect(cache.has(record.inquiry_id, stages)).toBe(true);
+  expect(cache.has(record.inquiry_id)).toBe(true);
 });
 
 test('без идентификатора устройства localStorage не используется', () => {
@@ -104,8 +98,8 @@ test('без идентификатора устройства localStorage не
     setItem: jest.fn(),
   }));
   const cache = createSettingCache(undefined, storage);
-  expect(cache.has(record.inquiry_id, stages)).toBe(false);
-  cache.save(record.inquiry_id, stages);
+  expect(cache.has(record.inquiry_id)).toBe(false);
+  cache.save(record.inquiry_id);
   expect(storage).not.toHaveBeenCalled();
 });
 
@@ -116,6 +110,6 @@ test('запрет доступа к localStorage даёт промах и бе�
       throw new Error('Storage unavailable');
     },
   );
-  expect(cache.has(record.inquiry_id, stages)).toBe(false);
-  expect(() => cache.save(record.inquiry_id, stages)).not.toThrow();
+  expect(cache.has(record.inquiry_id)).toBe(false);
+  expect(() => cache.save(record.inquiry_id)).not.toThrow();
 });

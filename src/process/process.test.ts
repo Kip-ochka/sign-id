@@ -3,7 +3,6 @@ import { AxiosError, AxiosHeaders } from 'axios';
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 import { settingStages } from '../screens/setting/checkWorkplace';
-import type { SettingStage } from '../screens/setting/checkWorkplace';
 import { httpClient, localFallback } from '../shared/api';
 import {
   checkProcess,
@@ -78,12 +77,10 @@ const signedCertificate = {
   person: {
     last_name: 'Тестов',
     first_name: 'Иван',
-    middle_name: '',
     inn: '123456789012',
-    snils: '',
   },
-  organization: { name: 'Тестовая организация', inn: '', ogrn: '' },
-  issuer: { name: 'Тестовый УЦ', inn: '', ogrn: '' },
+  organization: { name: 'Тестовая организация' },
+  issuer: { name: 'Тестовый УЦ' },
   certificate_base64: 'Y2VydA==',
 };
 const signedHash = { signatureBase64: 'YWJj', certificate: signedCertificate };
@@ -130,6 +127,10 @@ function route(replies: Record<string, PendingReply[]>) {
   return {
     requests,
     keys: () => requests.map(({ key }) => key),
+    sessions: (key: string) =>
+      requests
+        .filter((request) => request.key === key)
+        .map(({ config }) => config.headers.get('Session-id')),
     body: (key: string, index = 0) =>
       JSON.parse(
         requests.filter((request) => request.key === key)[index].config.data,
@@ -233,7 +234,7 @@ test.each([
   [{ code: 'ERR_NETWORK' }, defaultSettings],
 ])('START валидирует или целиком заменяет настройки', async (reply, expected) =>
   act(async () => {
-    const { keys, body } = route({
+    const { keys, body, sessions } = route({
       settings: [reply],
       start: [{ data: settingProcess }],
     });
@@ -243,6 +244,8 @@ test.each([
     await Promise.all([process.commands.start(), process.commands.start()]);
     await process.commands.start();
     expect(keys()).toEqual(['settings', 'start']);
+    expect(sessions('settings')).toEqual(['']);
+    expect(sessions('start')).toEqual(['']);
     expect(snapshot()).toMatchObject({
       settings: expected,
       serverProcess: 'SETTING',
@@ -275,11 +278,44 @@ test.each([checkProcess, signingProcess, statusProcess])(
     }),
 );
 
+test('SETTING без session даёт ошибку валидации', async () =>
+  act(async () => {
+    const { keys, sessions } = route({
+      settings: [{ data: settings }],
+      start: [{ data: { ...settingProcess, session: undefined } }],
+      RESPONSE_ERROR: [{ data: dictionaryStatus }],
+    });
+    const process = makeProcess();
+    await Promise.resolve();
+    await process.commands.start();
+    expect(process.snapshot().errorKey).toBe('RESPONSE_ERROR');
+    expect(process.snapshot().session).toBeUndefined();
+    expect(keys()).toEqual(['settings', 'start', 'RESPONSE_ERROR']);
+    expect(sessions('RESPONSE_ERROR')).toEqual(['']);
+  }));
+
+test('прямой переход из START в SIGNING отправляет пустой Session-id', async () =>
+  act(async () => {
+    const { sessions } = route({
+      settings: [{ data: settings }],
+      start: [{ data: signingProcess }],
+      document: [{ status: 400 }],
+      RESPONSE_DOC_DOWNLOAD_ERROR: [{ data: dictionaryStatus }],
+    });
+    const process = makeProcess();
+    await Promise.resolve();
+    await process.commands.start();
+    expect(process.snapshot().screen).toEqual(signingProcess);
+    await process.commands.downloadDocument('doc-1');
+    expect(sessions('document')).toEqual(['']);
+    expect(process.snapshot().errorKey).toBe('RESPONSE_DOC_DOWNLOAD_ERROR');
+  }));
+
 test('кэш проверяется до смены экрана, session сохранена до ready, token обновляется', async () =>
   act(async () => {
     const cache = deferred<boolean>();
     const cached = { ...settingProcess, session: 'new-session' };
-    const { body } = route({
+    const { body, sessions } = route({
       settings: [{ data: settings }],
       start: [{ data: cached }],
       ready: [{ data: task }],
@@ -291,7 +327,7 @@ test('кэш проверяется до смены экрана, session сох
     const { snapshot } = process;
     const run = process.commands.start();
     await jest.advanceTimersByTimeAsync(0);
-    expect(has).toHaveBeenCalledWith('synthetic-id', settingStages);
+    expect(has).toHaveBeenCalledWith('synthetic-id');
     expect(snapshot()).toMatchObject({
       session: cached.session,
       serverProcess: 'SETTING',
@@ -310,13 +346,15 @@ test('кэш проверяется до смены экрана, session сох
     });
     expect(body('ready')).not.toHaveProperty('session');
     expect(body('status')).not.toHaveProperty('session');
+    expect(sessions('ready')).toEqual([cached.session]);
+    expect(sessions('status')).toEqual([cached.session]);
   }));
 
 test('новый SETTING и SIGNING заменяют только соответствующее поле; BACK сохраняет реквизиты', async () =>
   act(async () => {
     const nextSetting = { ...settingProcess, session: 'next-session' };
     const nextSigning = { ...signingProcess, token: 'next-token' };
-    route({
+    const { sessions } = route({
       settings: [{ data: settings }],
       start: [{ data: settingProcess }],
       ready: [{ data: signingProcess }, { data: nextSigning }],
@@ -349,6 +387,14 @@ test('новый SETTING и SIGNING заменяют только соответ
       serverProcess: 'STATUS',
       screen: nextSigning,
     });
+    expect(sessions('ready')).toEqual([
+      settingProcess.session,
+      nextSetting.session,
+    ]);
+    expect(sessions('signing')).toEqual([
+      settingProcess.session,
+      nextSetting.session,
+    ]);
   }));
 
 test.each([
@@ -374,12 +420,12 @@ test.each([
           setItem: (key, value) => storage.set(key, value),
         }),
       );
-      cache.save('synthetic-id', settingStages);
+      cache.save('synthetic-id');
       const process = makeProcess('synthetic-id', {
         ...cache,
-        has: (id, stages) => {
+        has: (id) => {
           responding.resolve();
-          return cache.has(id, stages);
+          return cache.has(id);
         },
       });
       await Promise.resolve();
@@ -410,7 +456,7 @@ test.each([
 
 test('ошибка ready при cache hit не запускает ручную проверку и не показывает SETTING', async () =>
   act(async () => {
-    const { keys } = route({
+    const { keys, sessions } = route({
       settings: [{ data: settings }],
       start: [{ data: settingProcess }],
       ready: [{ status: 503, requestId: 'ready-error' }],
@@ -429,11 +475,59 @@ test('ошибка ready при cache hit не запускает ручную �
       errorKey: 'SERVICE_UNAVAL',
     });
     expect(keys()).toEqual(['settings', 'start', 'ready', 'SERVICE_UNAVAL']);
+    expect(sessions('SERVICE_UNAVAL')).toEqual([settingProcess.session]);
     expect(plugin).not.toHaveBeenCalled();
+  }));
+
+test('401 от загрузки настроек отключает Session-id до валидного SETTING', async () =>
+  act(async () => {
+    const { keys, sessions } = route({
+      settings: [{ status: 401 }],
+      start: [{ data: settingProcess }],
+      ready: [{ data: signingProcess }],
+    });
+    const process = makeProcess('synthetic-id', {
+      has: () => true,
+      save: jest.fn(),
+    });
+    await Promise.resolve();
+    await process.commands.start();
+    expect(keys()).toEqual(['settings', 'start', 'ready']);
+    expect(sessions('settings')).toEqual(['']);
+    expect(sessions('start')).toEqual([null]);
+    expect(sessions('ready')).toEqual([settingProcess.session]);
+  }));
+
+test('401 от справочника ошибок отключает Session-id при явном повторе', async () =>
+  act(async () => {
+    const { keys, sessions } = route({
+      settings: [{ data: settings }, { data: settings }],
+      start: [{ data: settingProcess }, { data: signingProcess }],
+      ready: [{ status: 503 }],
+      SERVICE_UNAVAL: [{ status: 401 }],
+    });
+    const process = makeProcess('synthetic-id', {
+      has: () => true,
+      save: jest.fn(),
+    });
+    await Promise.resolve();
+    await process.commands.start();
+    expect(keys()).toEqual(['settings', 'start', 'ready', 'SERVICE_UNAVAL']);
+    expect(sessions('SERVICE_UNAVAL')).toEqual([settingProcess.session]);
+    expect(process.snapshot().session).toBeNull();
+    await process.commands.retry();
+    expect(sessions('settings')).toEqual(['', null]);
+    expect(sessions('start')).toEqual(['', null]);
+    expect(process.snapshot().screen).toEqual(signingProcess);
   }));
 
 test('полная ручная проверка выполняется по порядку, сохраняет список и переживает отказ записи', async () =>
   act(async () => {
+    const filters = { person: { inn: '123456789012' } };
+    const checkResponse = {
+      ...checkProcess,
+      cryptopro: { ...checkProcess.cryptopro, filters },
+    };
     const { keys } = route({
       settings: [{ data: settings }],
       start: [
@@ -456,7 +550,7 @@ test('полная ручная проверка выполняется по п�
           },
         },
       ],
-      ready: [{ status: 429 }, { data: checkProcess }],
+      ready: [{ status: 429 }, { data: checkResponse }],
     });
     const order: string[] = [];
     const pluginDone = deferred<void>();
@@ -522,10 +616,10 @@ test('полная ручная проверка выполняется по п�
       'save',
       'certificate',
     ]);
-    expect(certificates).toHaveBeenCalledWith(settingProcess.cryptopro.filters);
+    expect(certificates.mock.calls).toEqual([[], [filters]]);
     expect(keys()).toEqual(['settings', 'start', 'ready', 'ready']);
     expect(process.snapshot()).toMatchObject({
-      screen: checkProcess,
+      screen: checkResponse,
       workplaceCertificates: syntheticCertificates,
       settingProgress: {
         extension: { state: 'SUCCESS' },
@@ -593,44 +687,63 @@ test.each([
     }),
 );
 
-test('CSP ниже 5.0 останавливает проверку до поиска сертификатов', async () =>
-  act(async () => {
-    const { keys } = route({
-      settings: [{ data: settings }],
-      start: [{ data: settingProcess }],
-    });
-    csp.mockResolvedValue({ major: 4, minor: 99, build: 99999 });
-    const process = makeProcess();
-    await Promise.resolve();
-    await process.commands.start();
-    await process.commands.checkSetting();
-    expect(process.snapshot().settingProgress?.program?.state).toBe('ERROR');
-    expect(certificates).not.toHaveBeenCalled();
-    await process.commands.showSettingError('program');
-    expect(process.snapshot().screen).toMatchObject({
-      process: 'STATUS',
-      screen: { title: 'Версия КриптоПро CSP не подходит' },
-    });
-    expect(keys()).toEqual(['settings', 'start']);
-  }));
-
-test.each<{ names: SettingStage[]; stages: SettingStage[] }>([
-  {
-    names: ['certificate', 'extension', 'extension'],
-    stages: ['extension', 'certificate'],
-  },
-  { names: ['extension'], stages: ['extension'] },
-  { names: ['program'], stages: ['program'] },
-  { names: ['certificate'], stages: ['certificate'] },
-])(
-  'SETTING с $names выполняет только $stages и отправляет ready',
-  async ({ names, stages }) =>
+test.each([true, false])(
+  'CSP ниже 5.0 останавливает проверку до поиска сертификатов, строка CSP: %s',
+  async (showCsp) =>
     act(async () => {
       const response = {
         ...settingProcess,
         screen: {
           ...settingProcess.screen,
           lists: {
+            testing: settingProcess.screen.lists.testing.filter(
+              ({ name }) => showCsp || name !== 'program',
+            ),
+          },
+        },
+      };
+      const { keys } = route({
+        settings: [{ data: settings }],
+        start: [{ data: response }],
+      });
+      csp.mockResolvedValue({ major: 4, minor: 99, build: 99999 });
+      const process = makeProcess();
+      await Promise.resolve();
+      await process.commands.start();
+      await process.commands.checkSetting();
+      expect(process.snapshot().settingProgress?.program?.state).toBe('ERROR');
+      expect(certificates).not.toHaveBeenCalled();
+      if (showCsp) {
+        expect(process.snapshot().screen).toEqual(response);
+        await process.commands.showSettingError('program');
+      }
+      expect(process.snapshot().screen).toMatchObject({
+        process: 'STATUS',
+        screen: { title: 'Версия КриптоПро CSP не подходит' },
+      });
+      expect(keys()).toEqual(['settings', 'start']);
+      if (!showCsp) {
+        await process.commands.back();
+        expect(process.snapshot().screen).toEqual(response);
+      }
+    }),
+);
+
+test.each([
+  { names: ['certificate', 'extension', 'extension'] },
+  { names: ['extension'] },
+  { names: [] },
+  { names: ['synthetic-extra'] },
+  { names: undefined },
+])(
+  'SETTING с визуальным списком $names выполняет все проверки и отправляет ready',
+  async ({ names }) =>
+    act(async () => {
+      const response = {
+        ...settingProcess,
+        screen: {
+          ...settingProcess.screen,
+          lists: names && {
             testing: names.map((name) => ({
               ...settingProcess.screen.lists.testing[0],
               name,
@@ -651,55 +764,18 @@ test.each<{ names: SettingStage[]; stages: SettingStage[] }>([
       await Promise.resolve();
       await process.commands.start();
       expect(process.snapshot().screen).toEqual(response);
-      expect(cache.has).toHaveBeenCalledWith('synthetic-id', stages);
+      expect(cache.has).toHaveBeenCalledWith('synthetic-id');
       expect(keys()).toEqual(['settings', 'start']);
       await process.commands.checkSetting();
-      expect(plugin).toHaveBeenCalledTimes(
-        Number(stages.includes('extension')),
-      );
-      expect(csp).toHaveBeenCalledTimes(Number(stages.includes('program')));
-      expect(certificates).toHaveBeenCalledTimes(
-        Number(stages.includes('certificate')) + 1,
-      );
+      expect(plugin).toHaveBeenCalledTimes(1);
+      expect(csp).toHaveBeenCalledTimes(1);
+      expect(certificates).toHaveBeenCalledTimes(2);
       expect(Object.keys(process.snapshot().settingProgress ?? {})).toEqual(
-        stages,
+        settingStages,
       );
-      expect(cache.save).toHaveBeenCalledWith('synthetic-id', stages);
+      expect(cache.save).toHaveBeenCalledWith('synthetic-id');
       expect(process.snapshot().screen).toEqual(checkProcess);
       expect(keys()).toEqual(['settings', 'start', 'ready']);
-    }),
-);
-
-test.each([{ names: [] }, { names: ['synthetic-extra'] }])(
-  'SETTING без известных этапов ($names) ведёт в локальный STATUS',
-  async ({ names }) =>
-    act(async () => {
-      const { keys } = route({
-        settings: [{ data: settings }],
-        start: [
-          {
-            data: {
-              ...settingProcess,
-              screen: {
-                ...settingProcess.screen,
-                lists: {
-                  testing: names.map((name) => ({
-                    ...settingProcess.screen.lists.testing[0],
-                    name,
-                  })),
-                },
-              },
-            },
-          },
-        ],
-      });
-      const cache = { has: jest.fn(() => true), save: jest.fn() };
-      const process = makeProcess('synthetic-id', cache);
-      await Promise.resolve();
-      await process.commands.start();
-      expect(process.snapshot().screen).toEqual(localFallback);
-      expect(cache.has).not.toHaveBeenCalled();
-      expect(keys()).toEqual(['settings', 'start']);
     }),
 );
 
@@ -991,7 +1067,7 @@ test.each(['start', 'status', 'document'])(
   async (endpoint) =>
     act(async () => {
       const next = endpoint === 'status' ? task : settingProcess;
-      const { keys, body } = route({
+      const { keys, body, sessions } = route({
         settings: [{ data: settings }, { data: settings }],
         start:
           endpoint === 'start'
@@ -1020,18 +1096,22 @@ test.each(['start', 'status', 'document'])(
         const download = process.commands.downloadDocument('doc-1');
         await jest.advanceTimersByTimeAsync(0);
         expect(snapshot().token).toBeUndefined();
-        expect(snapshot().session).toBeUndefined();
+        expect(snapshot().session).toBeNull();
         await jest.runAllTimersAsync();
         await download;
+        expect(sessions('document')).toEqual([settingProcess.session]);
       }
       expect(keys().filter((key) => key === 'start')).toHaveLength(2);
       expect(body('start', 1)).not.toHaveProperty('token');
       expect(body('start', 1)).not.toHaveProperty('session');
+      expect(sessions('settings')).toEqual(['', null]);
+      expect(sessions('start')).toEqual(['', null]);
+      expect(sessions('RESPONSE_ERROR')).toEqual([null]);
       expect(snapshot()).toMatchObject({
         errorKey: 'RESPONSE_ERROR',
         screen: dictionaryStatus,
       });
-      expect(snapshot().session).toBeUndefined();
+      expect(snapshot().session).toBeNull();
     }),
 );
 
@@ -1379,13 +1459,17 @@ test('явный повтор после второго 401 восстанавл
 
 test('CHECK подписывает по клику и повторяет multipart при 429/504 в пределах бюджета', async () =>
   act(async () => {
-    const { requests, keys } = route({
+    const { requests, keys, sessions } = route({
       settings: [{ data: settings }],
-      start: [{ data: checkProcess }],
+      start: [{ data: settingProcess }],
+      ready: [{ data: checkProcess }],
       check: [{ status: 429 }, { status: 504 }, { data: task }],
       status: [{ data: checkProcess }],
     });
-    const process = makeProcess();
+    const process = makeProcess('synthetic-id', {
+      has: () => true,
+      save: jest.fn(),
+    });
     await Promise.resolve();
     await process.commands.start();
     expect(sign).not.toHaveBeenCalled();
@@ -1396,24 +1480,28 @@ test('CHECK подписывает по клику и повторяет multipa
     const submit = process.commands.submitCheck('SYNTHETIC');
     await process.commands.submitCheck('SYNTHETIC');
     expect(process.snapshot().signaturePhase).toBe('signing');
-    expect(keys()).toEqual(['settings', 'start']);
+    expect(keys()).toEqual(['settings', 'start', 'ready']);
     pendingSignature.resolve(signedHash);
     await jest.advanceTimersByTimeAsync(0);
     expect(process.snapshot().signaturePhase).toBe('sending');
     await jest.runAllTimersAsync();
     await submit;
     expect(sign).toHaveBeenCalledTimes(1);
-    expect(sign).toHaveBeenCalledWith({
-      mode: checkProcess.cryptopro,
-      thumbprint: 'SYNTHETIC',
-      filters: undefined,
-      hashes: checkProcess.screen.test_document,
-      parameters: { profile: 'PKCS7' },
-    });
+    expect(sign).toHaveBeenCalledWith(
+      {
+        mode: checkProcess.cryptopro,
+        thumbprint: 'SYNTHETIC',
+        filters: undefined,
+        hashes: checkProcess.screen.test_document,
+        parameters: { profile: 'PKCS7' },
+      },
+      expect.any(AbortSignal),
+    );
     const forms = requests
       .filter(({ key }) => key === 'check')
       .map(({ config }) => config.data as FormData);
     expect(forms).toHaveLength(3);
+    expect(sessions('check')).toEqual(Array(3).fill(settingProcess.session));
     const json = await (forms[0].get('request') as File).text();
     expect(JSON.parse(json)).toMatchObject({
       test_document: checkProcess.screen.test_document,
@@ -1442,6 +1530,7 @@ test('CHECK подписывает по клику и повторяет multipa
     expect(keys()).toEqual([
       'settings',
       'start',
+      'ready',
       'check',
       'check',
       'check',
@@ -1702,10 +1791,7 @@ test('SIGNING отправляет готовые файлы повторно п
     });
     expect(plugin).toHaveBeenCalledTimes(2);
     expect(csp).toHaveBeenCalledTimes(2);
-    expect(certificates.mock.calls).toEqual([
-      [undefined],
-      [next.cryptopro.filters],
-    ]);
+    expect(certificates.mock.calls).toEqual([[], [next.cryptopro.filters]]);
     await process.commands.submitSigning('SYNTHETIC');
     expect(signDocuments.mock.calls[1][1]).toEqual(next.screen.lists.documents);
     expect(process.snapshot().screen).toEqual(successStatus);

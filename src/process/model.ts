@@ -37,7 +37,8 @@ export interface ProcessState {
   screen: DisplayScreen;
   previousProcess?: DisplayScreen['process'];
   task?: string;
-  session?: string;
+  // null означает, что после 401 заголовок нужно опускать до нового SETTING.
+  session?: string | null;
   token?: string;
   requestId?: string;
   errorKey?: string;

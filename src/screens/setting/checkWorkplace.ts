@@ -1,4 +1,3 @@
-import type { SettingScreen } from '../../shared/api';
 import { findCertificates } from '../../shared/services/cryptoPro/adapter';
 import { CryptoProError } from '../../shared/services/cryptoPro/error';
 import {
@@ -11,12 +10,6 @@ export type SettingStage = (typeof settingStages)[number];
 export type WorkplaceResult =
   { state: 'RUNNING' | 'SUCCESS' } | { state: 'ERROR'; code: string };
 
-export function getSettingStages(response: SettingScreen) {
-  return settingStages.filter((stage) =>
-    response.screen.lists.testing.some(({ name }) => name === stage),
-  );
-}
-
 export async function checkCsp() {
   const csp = await readCspVersion();
   if (csp.major < 5) {
@@ -25,14 +18,12 @@ export async function checkCsp() {
 }
 
 export async function checkWorkplace(
-  response: SettingScreen,
-  stages: readonly SettingStage[],
   signal: AbortSignal,
   update: (stage: SettingStage, state: 'RUNNING' | 'SUCCESS') => void,
-  fail: (stage: SettingStage, error: unknown) => void,
+  fail: (stage: SettingStage, error: unknown) => Promise<void>,
 ) {
   let certificates: Awaited<ReturnType<typeof findCertificates>> | undefined;
-  for (const stage of stages) {
+  for (const stage of settingStages) {
     try {
       signal.throwIfAborted();
       update(stage, 'RUNNING');
@@ -44,13 +35,13 @@ export async function checkWorkplace(
           await checkCsp();
           break;
         case 'certificate':
-          certificates = await findCertificates(response.cryptopro?.filters);
+          certificates = await findCertificates();
           break;
       }
       signal.throwIfAborted();
       update(stage, 'SUCCESS');
     } catch (error) {
-      if (!signal.aborted) fail(stage, error);
+      if (!signal.aborted) await fail(stage, error);
       return;
     }
   }

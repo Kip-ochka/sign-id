@@ -10,14 +10,18 @@ import { signHash } from '../../shared/services/cryptoPro/adapter';
 export async function prepareCheck(
   { screen: { test_document }, cryptopro }: CheckScreen,
   thumbprint: string,
+  signal: AbortSignal,
 ): Promise<Extract<SignedEvent, { event: 'check' }>> {
-  const { signatureBase64, certificate } = await signHash({
-    thumbprint,
-    mode: cryptopro,
-    filters: cryptopro.filters,
-    hashes: test_document,
-    parameters: { profile: 'PKCS7' },
-  });
+  const { signatureBase64, certificate } = await signHash(
+    {
+      thumbprint,
+      mode: cryptopro,
+      filters: cryptopro.filters,
+      hashes: test_document,
+      parameters: { profile: 'PKCS7' },
+    },
+    signal,
+  );
   return {
     event: 'check',
     payload: {

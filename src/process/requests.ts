@@ -26,6 +26,8 @@ export interface RequestOptions {
   inquiryId: string;
   settings: SettingsResponse;
   signal: AbortSignal;
+  session: string | null;
+  onUnauthorized: () => void;
 }
 
 type CheckPayload = Pick<CheckStateRequest, 'test_document' | 'certificates'>;
@@ -57,7 +59,7 @@ function requestBody(inquiryId: string): StartStateRequest {
 // Применяет retry и переводит HTTP-сбои в ошибки, по которым сценарий выбирает действие.
 async function sendRequest<T>(
   send: () => Promise<T>,
-  { settings, signal }: RequestOptions,
+  { settings, signal, onUnauthorized }: RequestOptions,
   { document = false, retryTimeout = true } = {},
 ) {
   try {
@@ -75,8 +77,10 @@ async function sendRequest<T>(
     const status = response?.status;
     const requestId = readRequestId(response);
 
-    if (status === 401)
+    if (status === 401) {
+      onUnauthorized();
       throw new ProcessRequestError('RESPONSE_ERROR', requestId, true);
+    }
     if (status === 503 || (status === 403 && !document)) {
       throw new ProcessRequestError('SERVICE_UNAVAL', requestId);
     }
@@ -115,9 +119,23 @@ async function sendState(
 
 export type ProcessReply = ReturnType<typeof readProcessResponse>;
 
-export async function loadSettings(signal: AbortSignal) {
+async function requestDictionary(
+  key: string,
+  options: RequestOptions,
+): Promise<AxiosResponse<unknown>> {
   try {
-    const response = await getSettings('settings', signal);
+    return await getSettings(key, options.signal, options.session);
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 401) {
+      options.onUnauthorized();
+    }
+    throw error;
+  }
+}
+
+export async function loadSettings(options: RequestOptions) {
+  try {
+    const response = await requestDictionary('settings', options);
     const parsed = settingsResponseSchema.safeParse(response.data);
     if (response.status === 200 && parsed.success) return parsed.data;
   } catch {
@@ -128,11 +146,11 @@ export async function loadSettings(signal: AbortSignal) {
 
 export async function loadErrorScreen(
   key: string | undefined,
-  signal: AbortSignal,
+  options: RequestOptions,
 ): Promise<StatusScreen> {
   if (!key) return localFallback;
   try {
-    const response = await getSettings(key, signal);
+    const response = await requestDictionary(key, options);
     const parsed = statusScreenSchema.safeParse(response.data);
     if (
       response.status === 200 &&
@@ -148,20 +166,22 @@ export async function loadErrorScreen(
 }
 
 export function requestStart(options: RequestOptions) {
-  const body = requestBody(options.inquiryId);
-  return sendState(() => state('start', body, options.signal), options);
+  const { inquiryId, signal, session } = options;
+  const body = requestBody(inquiryId);
+  return sendState(() => state('start', body, signal, session), options);
 }
 
 export function requestReady(options: RequestOptions) {
-  const body = requestBody(options.inquiryId);
-  return sendState(() => state('ready', body, options.signal), options);
+  const { inquiryId, signal, session } = options;
+  const body = requestBody(inquiryId);
+  return sendState(() => state('ready', body, signal, session), options);
 }
 
 // Один запрос статуса. Интервал между запросами задаёт цикл в polling.ts.
 export async function requestPoll(task: string, options: RequestOptions) {
   const body = { ...requestBody(options.inquiryId), task };
   const response = await sendRequest(
-    () => pollStatus(body, options.signal),
+    () => pollStatus(body, options.signal, options.session),
     options,
   );
   return readProcessResponse(response, false);
@@ -174,7 +194,7 @@ export function requestCheck(
 ) {
   const body = { ...requestBody(options.inquiryId), ...payload };
   return sendState(
-    () => state('check', body, files, options.signal),
+    () => state('check', body, files, options.signal, options.session),
     options,
     false,
   );
@@ -186,7 +206,7 @@ export function requestSigning(
 ) {
   const body = { ...requestBody(options.inquiryId), ...payload };
   return sendState(
-    () => state('signing', body, files, options.signal),
+    () => state('signing', body, files, options.signal, options.session),
     options,
     false,
   );
@@ -198,7 +218,7 @@ export async function requestDocument(
 ) {
   const body = { ...requestBody(options.inquiryId), document_id: documentId };
   const { document_id, title, format, base64 } = await sendRequest(
-    () => getDocument(body, options.signal),
+    () => getDocument(body, options.signal, options.session),
     options,
     { document: true },
   );

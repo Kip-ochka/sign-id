@@ -110,6 +110,12 @@ test.each([
     { method: 'GET', url: `${settingsApi}/${key}` },
   ]);
   expect(received[0].body).toHaveLength(0);
+  expect(received[0].headers['session-id']).toBe('');
+});
+
+test('сброшенная сессия исключает Session-id из HTTP-запроса', async () => {
+  await state('start', stateBody, undefined, null);
+  expect(received[0].headers).not.toHaveProperty('session-id');
 });
 
 test.each([
@@ -160,11 +166,14 @@ test.each([settingProcess, signingProcess])(
 
 test('getDocument отправляет JSON и возвращает разобранный документ', async () => {
   const body = { ...stateBody, document_id: documentMetadata.document_id };
-  await expect(getDocument(body)).resolves.toEqual({
+  await expect(
+    getDocument(body, undefined, settingProcess.session),
+  ).resolves.toEqual({
     ...documentMetadata,
     base64: documentBase64,
   });
   expect(received).toMatchObject([{ method: 'POST', url: `${api}/document` }]);
+  expect(received[0].headers['session-id']).toBe(settingProcess.session);
   expect(received[0].headers['content-type']).toMatch(/^application\/json\b/);
   expect(JSON.parse(received[0].body.toString('utf8'))).toEqual(body);
 });
@@ -202,7 +211,6 @@ const firstCertificateMetadata = {
   person: {
     first_name: 'Иван',
     last_name: 'Иванов',
-    middle_name: '',
     inn: '1',
     snils: '2',
   },
@@ -212,20 +220,54 @@ const firstCertificateMetadata = {
 const certificateMetadata = [
   firstCertificateMetadata,
   {
-    ...firstCertificateMetadata,
+    type: 'signed',
     serial_number: 'cert-2',
+    thumbprint: 'thumbprint-2',
   },
-];
+] satisfies Omit<Certificate, 'certificate_base64'>[];
 const certificateContents = ['Y2VydDE=', 'Y2VydDI='];
-const certificates = certificateMetadata.map((metadata, index) =>
+const certificates = [
+  {
+    ...firstCertificateMetadata,
+    person: { ...firstCertificateMetadata.person, middle_name: '' },
+  },
+  {
+    ...certificateMetadata[1],
+    expires_at: '',
+    person: { inn: '  ' },
+    organization: {},
+    issuer: { name: '' },
+  },
+].map((metadata, index) =>
   Object.freeze({
     ...metadata,
     certificate_base64: certificateContents[index],
   }),
 );
+
 const { test_document: testDocument } = checkProcess.screen;
 const { documents } = signingProcess.screen.lists;
 
+test('check допускает отсутствие метаданных сертификата и JSON-части request', async () => {
+  const files = {
+    signatures: [{ fileName: 'test', base64: 'AP+A' }],
+    certificates: [],
+  };
+  const request = { ...stateBody, test_document: testDocument };
+  await state('check', request, files);
+  await state('check', undefined, files);
+
+  const [withRequest, withoutRequest] = await Promise.all(
+    received.map(({ body, headers }) =>
+      new Response(new Uint8Array(body), {
+        headers: { 'Content-Type': headers['content-type'] ?? '' },
+      }).formData(),
+    ),
+  );
+  const jsonPart = withRequest.get('request') as File;
+  expect(JSON.parse(await jsonPart.text())).toEqual(request);
+  expect([...withoutRequest.keys()]).toEqual(['signatures']);
+});
 test.each([
   {
     event: 'check' as const,

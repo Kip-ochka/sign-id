@@ -24,23 +24,28 @@ const SIGNING_API_URL = '/proxy/services/corp-digital-id-sign/api/public/v1';
 export function getSettings(
   key: 'settings',
   signal?: AbortSignal,
+  session?: string | null,
 ): Promise<AxiosResponse<SettingsResponse>>;
 export function getSettings(
   key: ScreenKey,
   signal?: AbortSignal,
+  session?: string | null,
 ): Promise<AxiosResponse<ScreenResponse>>;
 export function getSettings(
   key: SettingKey,
   signal?: AbortSignal,
+  session: string | null = '',
 ): Promise<AxiosResponse<SettingsResponse | ScreenResponse>> {
   return httpClient.get<SettingsResponse | ScreenResponse>(SETTINGS_URL + key, {
     signal,
+    headers: { 'Session-id': session },
   });
 }
 
 export const getDocument = async (
   body: DocumentRequestBody,
   signal?: AbortSignal,
+  session: string | null = '',
 ): Promise<DocumentData> => {
   const { data, headers } = await httpClient.post<ArrayBuffer>(
     `${SIGNING_API_URL}/document`,
@@ -48,6 +53,7 @@ export const getDocument = async (
     {
       responseType: 'arraybuffer',
       signal,
+      headers: { 'Session-id': session },
       validateStatus: (status) => status === 200,
     },
   );
@@ -58,33 +64,45 @@ export const getDocument = async (
 export const pollStatus = (
   body: PollStatusRequestBody,
   signal?: AbortSignal,
+  session: string | null = '',
 ): Promise<AxiosResponse<unknown>> =>
-  httpClient.post<unknown>(`${SIGNING_API_URL}/poll/status`, body, { signal });
+  httpClient.post<unknown>(`${SIGNING_API_URL}/poll/status`, body, {
+    signal,
+    headers: { 'Session-id': session },
+  });
 
 type StateArgs = {
   [Event in StateEvent]: Event extends 'check' | 'signing'
     ? [
         event: Event,
-        body: StateRequest[Event],
+        body: StateRequest[Event] | undefined,
         files: StateFiles,
         signal?: AbortSignal,
+        session?: string | null,
       ]
-    : [event: Event, body: StateRequest[Event], signal?: AbortSignal];
+    : [
+        event: Event,
+        body: StateRequest[Event],
+        signal?: AbortSignal,
+        session?: string | null,
+      ];
 }[StateEvent];
 
 export const state = async (
-  ...[event, body, filesOrSignal, signal]: StateArgs
+  ...[event, body, filesOrSignal, signalOrSession, session]: StateArgs
 ): Promise<AxiosResponse<unknown>> => {
   const signed = event === 'check' || event === 'signing';
   const payload = signed
     ? createStateFormData(event, body, filesOrSignal)
     : body;
+  const sessionId = signed ? session : signalOrSession;
 
   return httpClient.post<unknown>(
     `${SIGNING_API_URL}/state/${event}`,
     payload,
     {
-      signal: signed ? signal : filesOrSignal,
+      signal: signed ? signalOrSession : filesOrSignal,
+      headers: { 'Session-id': sessionId === undefined ? '' : sessionId },
       validateStatus: (status) =>
         status === 303 || (status >= 200 && status < 300),
     },

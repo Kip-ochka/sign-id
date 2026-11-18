@@ -27,12 +27,12 @@ export const requestCertificateSchema = certificateSchema.omit({
 // Подписи в JSON не входят — они уходят файлами в FormData (см. StateFiles).
 export const checkStateRequestSchema = stateBaseRequestSchema.extend({
   test_document: testDocumentSchema,
-  certificates: z.array(requestCertificateSchema),
+  certificates: z.array(requestCertificateSchema).optional(),
 });
 
 export const signingStateRequestSchema = stateBaseRequestSchema.extend({
   documents: z.array(signingDocumentSchema),
-  certificates: z.array(requestCertificateSchema),
+  certificates: z.array(requestCertificateSchema).optional(),
 });
 
 const stateRequestSchemas = {

@@ -1,10 +1,10 @@
+import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 import { Loading } from '../../shared/ui/Loading';
-import { ScreenCard } from '../../shared/ui/ScreenCard';
 
 export function WaitingScreen() {
   return (
-    <ScreenCard title="Ожидаем результат обработки">
-      <Loading>Пожалуйста, подождите</Loading>
-    </ScreenCard>
+    <ContentWrapper>
+      <Loading>{'Ожидаем результат обработки.\nПожалуйста, подождите'}</Loading>
+    </ContentWrapper>
   );
 }

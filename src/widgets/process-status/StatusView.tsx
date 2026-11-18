@@ -1,12 +1,15 @@
+import Button from '@sber-site/malachite-kit/esm/components/Button';
+import successIcon from '../../shared/assets/success.svg';
+import warningIcon from '../../shared/assets/warning.svg';
 import type { DisplayScreen } from '../../entities/signing';
 import { canActivate } from '../../process/status';
 import { ScreenCard } from '../../shared/ui/ScreenCard';
 import styles from '../../shared/ui/Screen.module.css';
 import local from './StatusScreen.module.css';
 const levels = {
-  SUCCESS: { label: 'Успешно', symbol: '✓' },
-  WARNING: { label: 'Внимание', symbol: '!' },
-  ERROR: { label: 'Ошибка', symbol: '×' },
+  SUCCESS: { label: 'Успешно' },
+  WARNING: { label: 'Внимание' },
+  ERROR: { label: 'Ошибка' },
 } as const;
 
 export function StatusView({
@@ -19,7 +22,7 @@ export function StatusView({
   activate: (slot: 'accent' | 'secondary') => void;
 }) {
   const { title, message, level, buttons } = response.screen;
-  const { label, symbol } = levels[level];
+  const { label } = levels[level];
   const actions = (['accent', 'secondary'] as const).flatMap((slot) => {
     const button = buttons?.[slot];
     if (!button || !canActivate(button)) {
@@ -33,8 +36,10 @@ export function StatusView({
       message={message}
       indicator={
         <div className={local.level} data-level={level}>
-          <span aria-hidden="true">{symbol}</span>
-          {label}
+          <img
+            src={level === 'SUCCESS' ? successIcon : warningIcon}
+            alt={label}
+          />
         </div>
       }
     >
@@ -46,14 +51,15 @@ export function StatusView({
       {actions.length > 0 && (
         <div className={styles.actions}>
           {actions.map(({ slot, label }) => (
-            <button
+            <Button
               type="button"
+              theme={slot === 'accent' ? 'primary' : 'secondary'}
               key={slot}
               className={slot === 'accent' ? styles.primary : styles.secondary}
               onClick={() => activate(slot)}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       )}

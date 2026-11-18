@@ -1,3 +1,4 @@
+import Select from '@sber-site/malachite-kit/esm/components/Select';
 import { useState } from 'react';
 import { Loading } from '../../shared/ui/Loading';
 import styles from '../../shared/ui/Screen.module.css';
@@ -38,25 +39,25 @@ export function CertificatePicker({
           {certificates.options.length === 0 && (
             <p role="alert">Подходящие сертификаты не найдены.</p>
           )}
-          {certificates.options.length > 1 && (
+          {certificates.options.length > 0 && (
             <label className={styles.field}>
-              Выберите сертификат
-              <select
+              <span>Выберите сертификат</span>
+              <Select
+                aria-label="Выберите сертификат"
                 value={selected?.id ?? ''}
                 disabled={busy}
                 onChange={(event) => onSelect(event.target.value)}
-              >
-                <option value="">Выберите сертификат</option>
-                {certificates.options.map(
-                  ({ id, title, organization, serial }) => (
-                    <option value={id} key={id}>
-                      {[title, organization, serial]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </option>
-                  ),
+                placeholder="Выберите сертификат"
+                data={certificates.options.map(
+                  ({ id, title, organization, serial }) => ({
+                    id,
+                    value: id,
+                    text: [title, organization, serial]
+                      .filter(Boolean)
+                      .join(' · '),
+                  }),
                 )}
-              </select>
+              />
             </label>
           )}
           {selected && (

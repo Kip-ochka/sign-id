@@ -50,17 +50,17 @@ export function SigningScreen({
 
   return (
     <ScreenCard title={title} message={message} step={step}>
-      <DocumentList
-        documents={documents}
-        blocked={blocked}
-        pendingDocumentId={pendingDocumentId}
-        onOpenDocument={onOpenDocument}
-      />
       <CertificatePicker
         certificates={certificates}
         selected={selected}
         onSelect={selectCertificate}
         busy={blocked}
+      />
+      <DocumentList
+        documents={documents}
+        blocked={blocked}
+        pendingDocumentId={pendingDocumentId}
+        onOpenDocument={onOpenDocument}
       />
       {phase && (
         <Loading>

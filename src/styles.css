@@ -1,34 +1,30 @@
 :root {
-  font-family: system-ui, sans-serif;
+  font-family: 'SB Sans Text', Arial, sans-serif;
   line-height: 1.5;
-  --text: #182230;
-  --muted: #4c5a71;
+  --text: #1f1f22;
+  --muted: #696e72;
   --surface: #fff;
-  --border: #d6deea;
-  --accent: #244fba;
+  --border: #d9dde1;
+  --accent: #107f8c;
   color: var(--text);
-  background: #f3f6fb;
+  background: #f0f3f6;
 }
-
 * {
   box-sizing: border-box;
 }
-
 body {
+  min-width: 280px;
   min-height: 100vh;
   margin: 0;
 }
-
 button,
 select {
   font: inherit;
 }
-
 a {
   color: var(--accent);
 }
-
 :focus-visible {
-  outline: 3px solid #5479d2;
+  outline: 3px solid #107f8c;
   outline-offset: 3px;
 }

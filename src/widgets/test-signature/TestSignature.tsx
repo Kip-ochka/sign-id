@@ -1,3 +1,5 @@
+import { Link } from '@sber-site/malachite-kit';
+import styles from '../../shared/ui/Screen.module.css';
 import type { CheckScreen as CheckResponse, Consent } from '../../shared/api';
 import {
   CertificatePicker,
@@ -11,23 +13,28 @@ import { WorkActions } from '../../entities/signing';
 function ConsentText({ consent }: { consent: Consent }) {
   const url = httpUrl(consent.url);
   if (!url || !consent.hypertext) {
-    return <p>{consent.text}</p>;
+    return <p className={styles.agreement}>{consent.text}</p>;
   }
   const start = consent.text.indexOf(consent.hypertext);
   const link = (
-    <a href={url} target="_blank" rel="noopener noreferrer">
+    <Link
+      theme="secondary"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       {consent.hypertext}
-    </a>
+    </Link>
   );
   if (start < 0) {
     return (
-      <p>
+      <p className={styles.agreement}>
         {consent.text} {link}
       </p>
     );
   }
   return (
-    <p>
+    <p className={styles.agreement}>
       {consent.text.slice(0, start)}
       {link}
       {consent.text.slice(start + consent.hypertext.length)}
@@ -60,7 +67,6 @@ export function TestSignature({
         onSelect={selectCertificate}
         busy={blocked}
       />
-      <ConsentText consent={consent} />
       {phase && (
         <Loading>
           {phase === 'sending'
@@ -69,6 +75,7 @@ export function TestSignature({
         </Loading>
       )}
       <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
+      <ConsentText consent={consent} />
     </ScreenCard>
   );
 }

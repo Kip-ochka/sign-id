@@ -11,7 +11,16 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@sber-site/sbercraft-nova-kit/*": [
+        "./src/shared/vendor/sbercraft-nova-kit/*"
+      ],
+      "@sber-site/malachite-kit": [
+        "./src/shared/vendor/malachite-kit/index.tsx"
+      ],
+      "@sber-site/malachite-kit/*": ["./src/shared/vendor/malachite-kit/*"]
+    }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "test/design-preview.tsx"]
 }

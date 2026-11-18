@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 import fsd from './eslint/fsd.mjs';
 
 export default defineConfig(
-  globalIgnores(['dist/', '.idea/']),
+  globalIgnores(['dist/', '.idea/', 'actual-design/']),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

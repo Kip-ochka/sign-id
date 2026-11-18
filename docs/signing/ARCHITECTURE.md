@@ -46,3 +46,7 @@ shared             транспорт, CryptoPro, базовые UI и утил�
 Правило `fsd/import-boundaries` в ESLint проверяет относительные статические импорты, re-export и строковые динамические импорты: направление слоёв, изоляцию срезов и использование публичных API. Алиасы путей в проекте не используются. Интеграционные тесты исключены из ограничения слоёв, поскольку собирают несколько уровней приложения. Проверки самого правила: `node --test test/fsd.test.mjs`.
 
 Сценарные регрессии находятся в `widgets/signing-process/process.test.ts`; композиция App/страниц/widgets/features — в `app/processComposition.test.ts`. Реальный CryptoPro и браузерный HTTP 303 этими тестами не проверяются.
+
+## Актуальный UI от 18.11.2026
+
+Дизайн actual-design применяется через существующие widgets без замены модели/фичей. shared/ui содержит ContentWrapper, ScreenCard, SettingItem, DocumentLink и Loading; shared/assets — исходные SVG. Локальные замены внутренних UI-kit находятся в shared/vendor; единственные алиасы — @sber-site/sbercraft-nova-kit и @sber-site/malachite-kit (TypeScript/Vite/Jest). Они всегда ведут в shared; бизнес-слои через них не импортируются. test/design-preview.html — изолированный вход Vite для синтетической визуальной проверки.

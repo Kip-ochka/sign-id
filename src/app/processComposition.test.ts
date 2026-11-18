@@ -151,3 +151,24 @@ test('страница невалидной ссылки отображаетс�
   expect(requests).toEqual([]);
   expect(findCertificates).not.toHaveBeenCalled();
 });
+
+test('новый Select включает подпись только после выбора сертификата и передаёт его в команду', async () => {
+  const second = { ...certificate, thumbprint: 'SECOND', serial_number: '02' };
+  jest.mocked(findCertificates).mockResolvedValue([certificate, second]);
+  await render('synthetic-id');
+  await clickAction('Запустить проверку');
+  const confirm = () =>
+    tree!.root
+      .findAllByType('button')
+      .find(({ children }) => children.includes('Назад'))!;
+  expect(confirm().props.disabled).toBe(true);
+  const select = tree!.root.findByType('select');
+  expect(select.props.value).toBe('');
+  act(() => select.props.onChange({ target: { value: 'SECOND' } }));
+  expect(confirm().props.disabled).toBe(false);
+  await clickAction('Назад');
+  expect(signHash).toHaveBeenCalledWith(
+    expect.objectContaining({ thumbprint: 'SECOND' }),
+    expect.anything(),
+  );
+});

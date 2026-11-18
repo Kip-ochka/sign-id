@@ -1,7 +1,7 @@
 import type { SigningDocument } from '../../shared/api';
 import { Loading } from '../../shared/ui/Loading';
+import { DocumentLink } from '../../shared/ui/DocumentLink';
 import styles from '../../shared/ui/Screen.module.css';
-
 export function DocumentList({
   documents,
   blocked,
@@ -18,33 +18,36 @@ export function DocumentList({
       <h2 id="documents-title">Документы</h2>
       {documents.length === 0 && <p>Нет документов для подписания.</p>}
       <ul className={styles.list}>
-        {documents.map(({ id, title: documentTitle, format }) => (
-          <li key={id} className={styles.row}>
-            <div>
-              <strong>{documentTitle}</strong>
-              <div className={styles.detail}>{format}</div>
-            </div>
-            <button
-              type="button"
-              className={styles.secondary}
-              disabled={
-                !onOpenDocument || (blocked && pendingDocumentId !== id)
-              }
-              aria-disabled={pendingDocumentId === id || undefined}
-              aria-label={'Открыть документ «' + documentTitle + '»'}
-              onClick={(event) => {
-                if (blocked) {
-                  return;
+        {documents.map(({ id, title, format }) => {
+          const normalized = format.toUpperCase().replace(/^\./, '');
+          let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';
+          if (normalized === 'PDF') {
+            kind = 'PDF';
+          }
+          if (normalized === 'DOC' || normalized === 'DOCX') {
+            kind = 'DOC';
+          }
+          return (
+            <li key={id}>
+              <DocumentLink
+                format={kind}
+                title={title}
+                disabled={
+                  !onOpenDocument || (blocked && pendingDocumentId !== id)
                 }
-                event.currentTarget.focus();
-                onOpenDocument?.(id);
-              }}
-            >
-              Открыть документ
-            </button>
-            {pendingDocumentId === id && <Loading>Загружаем документ</Loading>}
-          </li>
-        ))}
+                pending={pendingDocumentId === id}
+                onClick={() => {
+                  if (!blocked) {
+                    onOpenDocument?.(id);
+                  }
+                }}
+              />
+              {pendingDocumentId === id && (
+                <Loading>Загружаем документ</Loading>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

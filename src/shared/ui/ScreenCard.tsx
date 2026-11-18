@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import Heading from '@sber-site/sbercraft-nova-kit/components/Heading';
+import Text from '@sber-site/sbercraft-nova-kit/components/Text';
+import Typography from '@sber-site/malachite-kit/esm/components/Typography';
+import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
+import { ContentWrapper } from './ContentWrapper';
 import styles from './Screen.module.css';
 export function ScreenCard({
   title,
@@ -15,19 +20,32 @@ export function ScreenCard({
   children: ReactNode;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const { isDesktop } = useBreakpoints();
   useEffect(() => heading.current?.focus(), [title]);
   return (
-    <main className={styles.page}>
-      <div className={styles.service}>Подписание документов</div>
-      <article className={styles.card}>
+    <ContentWrapper>
+      <div className={styles.card}>
+        {step && (
+          <div className={styles.step}>
+            <Typography.Paragraph>{step}</Typography.Paragraph>
+          </div>
+        )}
         {indicator}
-        {step && <p className={styles.step}>{step}</p>}
-        <h1 ref={heading} tabIndex={-1}>
+        <Heading
+          tag="h1"
+          size={isDesktop ? 'h2' : 'h3'}
+          ref={heading}
+          tabIndex={-1}
+        >
           {title}
-        </h1>
-        {message && <p className={styles.message}>{message}</p>}
+        </Heading>
+        {message && (
+          <Text tag="p" className={styles.message}>
+            {message}
+          </Text>
+        )}
         {children}
-      </article>
-    </main>
+      </div>
+    </ContentWrapper>
   );
 }

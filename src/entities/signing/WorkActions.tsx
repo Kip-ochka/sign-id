@@ -1,3 +1,4 @@
+import Button from '@sber-site/malachite-kit/esm/components/Button';
 import type { ScreenButtons } from '../../shared/api';
 import { httpUrl } from '../../shared/lib/httpUrl';
 import styles from '../../shared/ui/Screen.module.css';
@@ -30,22 +31,22 @@ export function WorkActions({
       );
     } else {
       secondaryAction = (
-        <button type="button" className={styles.secondary} disabled>
+        <Button type="button" className={styles.secondary} disabled>
           {secondary.message}
-        </button>
+        </Button>
       );
     }
   }
   return (
     <div className={styles.actions}>
-      <button
+      <Button
         type="button"
         className={styles.primary}
         disabled={busy || !onAction}
         onClick={onAction}
       >
         {buttons.accent.message}
-      </button>
+      </Button>
       {secondaryAction}
     </div>
   );

@@ -1,12 +1,6 @@
 import express from 'express';
 import { env } from 'node:process';
-import {
-  config,
-  document,
-  errorScreen,
-  process,
-  settings,
-} from './mock-data.mjs';
+import { config, document, errorScreen, process, settings } from './data.mjs';
 
 const app = express();
 const api = '/proxy/services/corp-digital-id-sign/api/public/v1';

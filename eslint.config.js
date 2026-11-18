@@ -7,7 +7,20 @@ import tseslint from 'typescript-eslint';
 import fsd from './eslint/fsd.mjs';
 
 export default defineConfig(
-  globalIgnores(['dist/', '.idea/', 'actual-design/']),
+  globalIgnores([
+    'dist/',
+    '.idea/',
+    'actual-design/',
+    '.local/',
+    '.mock-data/',
+    'docs/',
+    'test/',
+    'src/shared/vendor/',
+    '**/*.test.ts',
+    '**/__tests__/',
+    'jest.config.js',
+    'mock-server.mjs',
+  ]),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

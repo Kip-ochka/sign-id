@@ -1,3 +1,4 @@
+import { sessionStorage, sessionTtl } from './sessionStorage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { AxiosError, AxiosHeaders } from 'axios';
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
@@ -184,6 +185,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   jest.useFakeTimers();
+  sessionStorage.clear();
   plugin.mockReset().mockResolvedValue(undefined);
   csp.mockReset().mockResolvedValue({ major: 5, minor: 0, build: 1 });
   certificates.mockReset().mockResolvedValue(syntheticCertificates);
@@ -198,6 +200,7 @@ afterEach(() => {
   renderers.clear();
   httpClient.defaults.adapter = originalAdapter;
   jest.restoreAllMocks();
+  sessionStorage.clear();
   jest.useRealTimers();
 });
 
@@ -244,8 +247,8 @@ test.each([
     await Promise.all([process.commands.start(), process.commands.start()]);
     await process.commands.start();
     expect(keys()).toEqual(['settings', 'start']);
-    expect(sessions('settings')).toEqual(['']);
-    expect(sessions('start')).toEqual(['']);
+    expect(sessions('settings')).toEqual([null]);
+    expect(sessions('start')).toEqual([null]);
     expect(snapshot()).toMatchObject({
       settings: expected,
       serverProcess: 'SETTING',
@@ -291,12 +294,12 @@ test('SETTING без session даёт ошибку валидации', async ()
     expect(process.snapshot().errorKey).toBe('RESPONSE_ERROR');
     expect(process.snapshot().session).toBeUndefined();
     expect(keys()).toEqual(['settings', 'start', 'RESPONSE_ERROR']);
-    expect(sessions('RESPONSE_ERROR')).toEqual(['']);
+    expect(sessions('RESPONSE_ERROR')).toEqual([null]);
   }));
 
-test('прямой переход из START в SIGNING отправляет пустой Session-id', async () =>
+test('прямой переход из START в SIGNING не отправляет Session-id без сессии', async () =>
   act(async () => {
-    const { sessions } = route({
+    const { sessions, requests } = route({
       settings: [{ data: settings }],
       start: [{ data: signingProcess }],
       document: [{ status: 400 }],
@@ -307,7 +310,17 @@ test('прямой переход из START в SIGNING отправляет п�
     await process.commands.start();
     expect(process.snapshot().screen).toEqual(signingProcess);
     await process.commands.downloadDocument('doc-1');
-    expect(sessions('document')).toEqual(['']);
+    expect(sessions('document')).toEqual([null]);
+    expect(
+      requests
+        .find(({ key }) => key === 'document')
+        ?.config.headers.get('X-integrity-token'),
+    ).toBe(signingProcess.token);
+    expect(
+      requests
+        .filter(({ key }) => key !== 'document')
+        .every(({ config }) => !config.headers.has('X-integrity-token')),
+    ).toBe(true);
     expect(process.snapshot().errorKey).toBe('RESPONSE_DOC_DOWNLOAD_ERROR');
   }));
 
@@ -493,7 +506,7 @@ test('401 от загрузки настроек отключает Session-id �
     await Promise.resolve();
     await process.commands.start();
     expect(keys()).toEqual(['settings', 'start', 'ready']);
-    expect(sessions('settings')).toEqual(['']);
+    expect(sessions('settings')).toEqual([null]);
     expect(sessions('start')).toEqual([null]);
     expect(sessions('ready')).toEqual([settingProcess.session]);
   }));
@@ -516,8 +529,8 @@ test('401 от справочника ошибок отключает Session-id
     expect(sessions('SERVICE_UNAVAL')).toEqual([settingProcess.session]);
     expect(process.snapshot().session).toBeNull();
     await process.commands.retry();
-    expect(sessions('settings')).toEqual(['', null]);
-    expect(sessions('start')).toEqual(['', null]);
+    expect(sessions('settings')).toEqual([null, null]);
+    expect(sessions('start')).toEqual([null, null]);
     expect(process.snapshot().screen).toEqual(signingProcess);
   }));
 
@@ -1034,7 +1047,7 @@ test.each([0, 1, 3])(
       await Promise.resolve();
       const { snapshot } = process;
       const run = process.commands.start();
-      await jest.runAllTimersAsync();
+      await jest.advanceTimersByTimeAsync(100);
       await run;
       expect(keys().filter((key) => key === 'start')).toHaveLength(
         Math.max(1, retry_count),
@@ -1088,7 +1101,7 @@ test.each(['start', 'status', 'document'])(
       await Promise.resolve();
       const { snapshot } = process;
       const run = process.commands.start();
-      await jest.runAllTimersAsync();
+      await jest.advanceTimersByTimeAsync(20000);
       await run;
       if (endpoint === 'document') {
         expect(snapshot().token).toBe(signingProcess.token);
@@ -1104,8 +1117,8 @@ test.each(['start', 'status', 'document'])(
       expect(keys().filter((key) => key === 'start')).toHaveLength(2);
       expect(body('start', 1)).not.toHaveProperty('token');
       expect(body('start', 1)).not.toHaveProperty('session');
-      expect(sessions('settings')).toEqual(['', null]);
-      expect(sessions('start')).toEqual(['', null]);
+      expect(sessions('settings')).toEqual([null, null]);
+      expect(sessions('start')).toEqual([null, null]);
       expect(sessions('RESPONSE_ERROR')).toEqual([null]);
       expect(snapshot()).toMatchObject({
         errorKey: 'RESPONSE_ERROR',
@@ -1326,7 +1339,8 @@ test.each(['timer', 'manual', 'stop', 'back'])(
         mode === 'timer' || mode === 'back' ? 'STATUS' : 'SETTING',
       );
       expect(navigate).toHaveBeenCalledTimes(mode === 'manual' ? 1 : 0);
-      expect(jest.getTimerCount()).toBe(0);
+      // Таймер срока сессии продолжает работать независимо от STATUS.
+      expect(jest.getTimerCount()).toBe(1);
     }),
 );
 
@@ -1501,6 +1515,11 @@ test('CHECK подписывает по клику и повторяет multipa
       .filter(({ key }) => key === 'check')
       .map(({ config }) => config.data as FormData);
     expect(forms).toHaveLength(3);
+    expect(
+      requests
+        .filter(({ key }) => key === 'check')
+        .every(({ config }) => !config.headers.has('X-integrity-token')),
+    ).toBe(true);
     expect(sessions('check')).toEqual(Array(3).fill(settingProcess.session));
     const json = await (forms[0].get('request') as File).text();
     expect(JSON.parse(json)).toMatchObject({
@@ -1760,6 +1779,11 @@ test('SIGNING отправляет готовые файлы повторно п
       .filter(({ key }) => key === 'signing')
       .map(({ config }) => config.data as FormData);
     expect(forms).toHaveLength(3);
+    expect(
+      requests
+        .filter(({ key }) => key === 'signing')
+        .map(({ config }) => config.headers.get('X-integrity-token')),
+    ).toEqual(Array(3).fill(signingProcess.token));
     const json = await (forms[0].get('request') as File).text();
     const { certificate_base64, ...metadata } = signedCertificate;
     expect(JSON.parse(json)).toMatchObject({
@@ -1795,6 +1819,12 @@ test('SIGNING отправляет готовые файлы повторно п
     await process.commands.submitSigning('SYNTHETIC');
     expect(signDocuments.mock.calls[1][1]).toEqual(next.screen.lists.documents);
     expect(process.snapshot().screen).toEqual(successStatus);
+    expect(
+      requests
+        .filter(({ key }) => key === 'signing')
+        .at(-1)
+        ?.config.headers.get('X-integrity-token'),
+    ).toBe(next.token);
   }));
 
 test.each([
@@ -1899,3 +1929,30 @@ test.each(['подпись', 'ответ REST.01'])(
       ]);
     }),
 );
+
+test('сохранённая сессия используется на START и удаляется до повторного запроса документа после TTL', async () =>
+  act(async () => {
+    sessionStorage.save('restored-session');
+    const { requests, sessions } = route({
+      settings: [{ data: { ...settings, retry_time: 10, retry_addition: 0 } }],
+      start: [{ data: signingProcess }],
+      document: [{ status: 429 }, { status: 400 }],
+      RESPONSE_DOC_DOWNLOAD_ERROR: [{ data: dictionaryStatus }],
+    });
+    const process = makeProcess();
+    await Promise.resolve();
+    await process.commands.start();
+    expect(sessions('settings')).toEqual(['restored-session']);
+    expect(sessions('start')).toEqual(['restored-session']);
+    await jest.advanceTimersByTimeAsync(sessionTtl - 5);
+    const download = process.commands.downloadDocument('doc-1');
+    await jest.advanceTimersByTimeAsync(10);
+    await download;
+    expect(sessions('document')).toEqual(['restored-session', null]);
+    expect(
+      requests
+        .filter(({ key }) => key === 'document')
+        .map(({ config }) => config.headers.get('X-integrity-token')),
+    ).toEqual([signingProcess.token, signingProcess.token]);
+    expect(sessionStorage.read()).toBeUndefined();
+  }));

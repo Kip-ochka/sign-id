@@ -1,3 +1,4 @@
+import { sessionStorage } from './sessionStorage';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { prepareCheck } from '../screens/check/prepareCheck';
@@ -51,7 +52,10 @@ export function useProcess(
   inquiryId: string,
   settingCache: SettingCache = defaultSettingCache,
 ) {
-  const [state, setState] = useState(() => initialState(inquiryId));
+  const [state, setState] = useState<ProcessState>(() => ({
+    ...initialState(inquiryId),
+    session: inquiryId ? sessionStorage.read() : undefined,
+  }));
   const activeRequest = useRef<AbortController>();
   const restartedAfter401 = useRef(false);
 
@@ -160,6 +164,7 @@ export function useProcess(
         }
         if (screen.process === 'SETTING') {
           // ready по кэшу использует новую сессию в той же операции.
+          sessionStorage.save(screen.session);
           options.session = screen.session;
           if (readySent) {
             setState((previous) =>
@@ -203,7 +208,6 @@ export function useProcess(
   // Сначала получаем настройки, чтобы уже запрос start использовал их для retry.
   const handleStart = useCallback(
     async (options: RequestOptions) => {
-      if (options.session !== null) options.session = '';
       const settings = await loadSettings(options);
       options.signal.throwIfAborted();
       options.settings = settings;
@@ -221,14 +225,23 @@ export function useProcess(
       if (!inquiryId || activeRequest.current) return;
       const controller = new AbortController();
       const { signal } = controller;
+      let sessionDisabled = state.session === null;
       const options: RequestOptions = {
         inquiryId,
         settings: state.settings,
-        session: state.session === undefined ? '' : state.session,
+        get session() {
+          return sessionDisabled ? null : (sessionStorage.read() ?? null);
+        },
+        set session(value: string | null) {
+          sessionDisabled = value === null;
+          if (sessionDisabled) sessionStorage.clear();
+        },
+        token: state.token,
         signal,
         onUnauthorized: () => {
           if (signal.aborted) return;
           options.session = null;
+          options.token = undefined;
           setState((previous) => ({ ...previous, session: null }));
         },
       };
@@ -278,7 +291,14 @@ export function useProcess(
         }
       }
     },
-    [handleStart, inquiryId, showError, state.session, state.settings],
+    [
+      handleStart,
+      inquiryId,
+      showError,
+      state.session,
+      state.settings,
+      state.token,
+    ],
   );
 
   const start = useCallback(() => {

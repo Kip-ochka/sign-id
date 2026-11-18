@@ -34,18 +34,19 @@ export function getSettings(
 export function getSettings(
   key: SettingKey,
   signal?: AbortSignal,
-  session: string | null = '',
+  session: string | null = null,
 ): Promise<AxiosResponse<SettingsResponse | ScreenResponse>> {
   return httpClient.get<SettingsResponse | ScreenResponse>(SETTINGS_URL + key, {
     signal,
-    headers: { 'Session-id': session },
+    headers: { 'Session-id': session || null },
   });
 }
 
 export const getDocument = async (
   body: DocumentRequestBody,
   signal?: AbortSignal,
-  session: string | null = '',
+  session: string | null = null,
+  token?: string,
 ): Promise<DocumentData> => {
   const { data, headers } = await httpClient.post<ArrayBuffer>(
     `${SIGNING_API_URL}/document`,
@@ -53,7 +54,7 @@ export const getDocument = async (
     {
       responseType: 'arraybuffer',
       signal,
-      headers: { 'Session-id': session },
+      headers: { 'Session-id': session || null, 'X-integrity-token': token },
       validateStatus: (status) => status === 200,
     },
   );
@@ -64,11 +65,11 @@ export const getDocument = async (
 export const pollStatus = (
   body: PollStatusRequestBody,
   signal?: AbortSignal,
-  session: string | null = '',
+  session: string | null = null,
 ): Promise<AxiosResponse<unknown>> =>
   httpClient.post<unknown>(`${SIGNING_API_URL}/poll/status`, body, {
     signal,
-    headers: { 'Session-id': session },
+    headers: { 'Session-id': session || null },
   });
 
 type StateArgs = {
@@ -79,6 +80,7 @@ type StateArgs = {
         files: StateFiles,
         signal?: AbortSignal,
         session?: string | null,
+        token?: string,
       ]
     : [
         event: Event,
@@ -89,7 +91,7 @@ type StateArgs = {
 }[StateEvent];
 
 export const state = async (
-  ...[event, body, filesOrSignal, signalOrSession, session]: StateArgs
+  ...[event, body, filesOrSignal, signalOrSession, session, token]: StateArgs
 ): Promise<AxiosResponse<unknown>> => {
   const signed = event === 'check' || event === 'signing';
   const payload = signed
@@ -102,7 +104,10 @@ export const state = async (
     payload,
     {
       signal: signed ? signalOrSession : filesOrSignal,
-      headers: { 'Session-id': sessionId === undefined ? '' : sessionId },
+      headers: {
+        'Session-id': sessionId || null,
+        'X-integrity-token': event === 'signing' ? token : undefined,
+      },
       validateStatus: (status) =>
         status === 303 || (status >= 200 && status < 300),
     },

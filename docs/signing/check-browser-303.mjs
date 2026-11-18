@@ -114,7 +114,7 @@ try {
   assert.equal(requests[2].body.task, 'synthetic-task');
   assert.deepEqual(
     requests.slice(1).map(({ session }) => session),
-    ['', undefined, 'synthetic-session', 'synthetic-session'],
+    [undefined, undefined, 'synthetic-session', 'synthetic-session'],
   );
   assert.deepEqual(
     requests.map(({ method, path }) => [method, path.slice(api.length)]),

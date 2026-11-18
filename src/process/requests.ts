@@ -27,6 +27,7 @@ export interface RequestOptions {
   settings: SettingsResponse;
   signal: AbortSignal;
   session: string | null;
+  token?: string;
   onUnauthorized: () => void;
 }
 
@@ -166,15 +167,21 @@ export async function loadErrorScreen(
 }
 
 export function requestStart(options: RequestOptions) {
-  const { inquiryId, signal, session } = options;
+  const { inquiryId, signal } = options;
   const body = requestBody(inquiryId);
-  return sendState(() => state('start', body, signal, session), options);
+  return sendState(
+    () => state('start', body, signal, options.session),
+    options,
+  );
 }
 
 export function requestReady(options: RequestOptions) {
-  const { inquiryId, signal, session } = options;
+  const { inquiryId, signal } = options;
   const body = requestBody(inquiryId);
-  return sendState(() => state('ready', body, signal, session), options);
+  return sendState(
+    () => state('ready', body, signal, options.session),
+    options,
+  );
 }
 
 // Один запрос статуса. Интервал между запросами задаёт цикл в polling.ts.
@@ -206,7 +213,15 @@ export function requestSigning(
 ) {
   const body = { ...requestBody(options.inquiryId), ...payload };
   return sendState(
-    () => state('signing', body, files, options.signal, options.session),
+    () =>
+      state(
+        'signing',
+        body,
+        files,
+        options.signal,
+        options.session,
+        options.token,
+      ),
     options,
     false,
   );
@@ -218,7 +233,7 @@ export async function requestDocument(
 ) {
   const body = { ...requestBody(options.inquiryId), document_id: documentId };
   const { document_id, title, format, base64 } = await sendRequest(
-    () => getDocument(body, options.signal, options.session),
+    () => getDocument(body, options.signal, options.session, options.token),
     options,
     { document: true },
   );

@@ -110,13 +110,35 @@ test.each([
     { method: 'GET', url: `${settingsApi}/${key}` },
   ]);
   expect(received[0].body).toHaveLength(0);
-  expect(received[0].headers['session-id']).toBe('');
+  expect(received[0].headers).not.toHaveProperty('session-id');
 });
 
 test('сброшенная сессия исключает Session-id из HTTP-запроса', async () => {
   await state('start', stateBody, undefined, null);
   expect(received[0].headers).not.toHaveProperty('session-id');
 });
+
+test.each([undefined, null, ''])(
+  'сессия %s исключает Session-id во всех API-запросах',
+  async (session) => {
+    const files = { signatures: [], certificates: [] };
+    await getSettings('settings', undefined, session);
+    await state('start', stateBody, undefined, session);
+    await state('ready', stateBody, undefined, session);
+    await pollStatus({ ...stateBody, task: task.task }, undefined, session);
+    await getDocument(
+      { ...stateBody, document_id: documentMetadata.document_id },
+      undefined,
+      session,
+    );
+    await state('check', undefined, files, undefined, session);
+    await state('signing', undefined, files, undefined, session);
+    expect(received).toHaveLength(7);
+    for (const request of received) {
+      expect(request.headers).not.toHaveProperty('session-id');
+    }
+  },
+);
 
 test.each([
   ['start', `${api}/state/start`, stateBody, statusProcess],
@@ -167,13 +189,14 @@ test.each([settingProcess, signingProcess])(
 test('getDocument отправляет JSON и возвращает разобранный документ', async () => {
   const body = { ...stateBody, document_id: documentMetadata.document_id };
   await expect(
-    getDocument(body, undefined, settingProcess.session),
+    getDocument(body, undefined, settingProcess.session, signingProcess.token),
   ).resolves.toEqual({
     ...documentMetadata,
     base64: documentBase64,
   });
   expect(received).toMatchObject([{ method: 'POST', url: `${api}/document` }]);
   expect(received[0].headers['session-id']).toBe(settingProcess.session);
+  expect(received[0].headers['x-integrity-token']).toBe(signingProcess.token);
   expect(received[0].headers['content-type']).toMatch(/^application\/json\b/);
   expect(JSON.parse(received[0].body.toString('utf8'))).toEqual(body);
 });
@@ -306,6 +329,9 @@ test.each([
           signatures,
           certificates: createCertificateFiles(certificates),
         },
+        undefined,
+        settingProcess.session,
+        signingProcess.token,
       );
     },
     responseData: task,
@@ -321,6 +347,9 @@ test.each([
       status: 200,
       data: responseData,
     });
+    expect(received[0].headers['x-integrity-token']).toBe(
+      event === 'signing' ? signingProcess.token : undefined,
+    );
     expect(received).toMatchObject([
       { method: 'POST', url: `${api}/state/${event}` },
     ]);

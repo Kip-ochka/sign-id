@@ -23,7 +23,7 @@ export function createSessionStorage(
     }
   }
 
-  function read() {
+  function readEntry() {
     let entry: unknown = memory;
     try {
       const raw = memoryOnly
@@ -66,7 +66,11 @@ export function createSessionStorage(
     timer = setTimeout(() => {
       read();
     }, entry.expiresAt - Date.now());
-    return entry.id;
+    return memory;
+  }
+
+  function read() {
+    return readEntry()?.id;
   }
 
   function save(id: string) {
@@ -81,7 +85,7 @@ export function createSessionStorage(
     read();
   }
 
-  return { read, save, clear };
+  return { read, readEntry, save, clear };
 }
 
 export const sessionStorage = createSessionStorage();

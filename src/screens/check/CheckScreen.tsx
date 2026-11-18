@@ -17,11 +17,14 @@ function ConsentText({ consent }: { consent: Consent }) {
       {consent.hypertext}
     </a>
   );
-  return start < 0 ? (
-    <p>
-      {consent.text} {link}
-    </p>
-  ) : (
+  if (start < 0) {
+    return (
+      <p>
+        {consent.text} {link}
+      </p>
+    );
+  }
+  return (
     <p>
       {consent.text.slice(0, start)}
       {link}
@@ -43,6 +46,10 @@ export function CheckScreen({
   const { selected, selectCertificate } = useSelectedCertificate(certificates);
   const { title, message, buttons, consent } = response.screen;
   const blocked = busy || certificates.status === 'loading';
+  let sign: (() => void) | undefined;
+  if (selected && onSign) {
+    sign = () => onSign(selected);
+  }
   return (
     <ScreenCard title={title} message={message}>
       <CertificatePicker
@@ -59,11 +66,7 @@ export function CheckScreen({
             : 'Выполняем тестовую подпись'}
         </Loading>
       )}
-      <WorkActions
-        buttons={buttons}
-        busy={blocked}
-        onAction={selected && onSign ? () => onSign(selected) : undefined}
-      />
+      <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
     </ScreenCard>
   );
 }

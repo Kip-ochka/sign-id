@@ -43,7 +43,7 @@ function readBase64(value: unknown, stage: 'certificate' | 'signing') {
   throw new CryptoProError(stage, 'BASE64_ERROR');
 }
 
-async function* matchingCertificates(filters?: CertificateFilters) {
+async function getValidCertificates() {
   const { getUserCertificates } =
     await import('crypto-pro-actual-cades-plugin');
   let certificates: PluginCertificate[];
@@ -54,23 +54,17 @@ async function* matchingCertificates(filters?: CertificateFilters) {
       error instanceof Error &&
       error.message === 'Нет доступных сертификатов'
     ) {
-      return;
+      return [];
     }
     throw error;
   }
   const now = Date.now();
-  for (const certificate of certificates) {
-    if (!certificate.validFrom || !certificate.validTo) continue;
+  return certificates.filter((certificate) => {
+    if (!certificate.validFrom || !certificate.validTo) return false;
     const validFrom = new Date(certificate.validFrom).getTime();
     const validTo = new Date(certificate.validTo).getTime();
-    if (!(validFrom <= now && now <= validTo)) continue;
-
-    const names = readCertificateNames(
-      certificate.subjectName,
-      certificate.issuerName,
-    );
-    if (matchesCertificate(names, filters)) yield { certificate, names };
-  }
+    return validFrom <= now && now <= validTo;
+  });
 }
 
 async function readCertificate(
@@ -102,9 +96,14 @@ export async function findCertificates(filters?: CertificateFilters) {
     'CERTIFICATE_SEARCH_FAILED',
     async () => {
       const certificates = new Map<string, SigningCertificate>();
-      for await (const { certificate, names } of matchingCertificates(
-        filters,
-      )) {
+      const candidates = await getValidCertificates();
+      await candidates.reduce(async (previous, certificate) => {
+        await previous;
+        const names = readCertificateNames(
+          certificate.subjectName,
+          certificate.issuerName,
+        );
+        if (!matchesCertificate(names, filters)) return;
         const thumbprint = certificate.thumbprint.toUpperCase();
         if (!certificates.has(thumbprint)) {
           certificates.set(
@@ -112,7 +111,7 @@ export async function findCertificates(filters?: CertificateFilters) {
             await readCertificate(certificate, names),
           );
         }
-      }
+      }, Promise.resolve());
       if (!certificates.size)
         throw new CryptoProError('certificate', 'NO_CERT');
       return [...certificates.values()];
@@ -122,13 +121,17 @@ export async function findCertificates(filters?: CertificateFilters) {
 
 function selectHash(oid: string, hashes: SigningHashes) {
   // getAlgorithm читает OID открытого ключа, а не OID подписи издателя сертификата.
-  const bits =
-    oid === '1.2.643.7.1.1.1.1'
-      ? 256
-      : oid === '1.2.643.7.1.1.1.2'
-        ? 512
-        : undefined;
-  if (!bits) throw new CryptoProError('signing', 'UNSUPPORTED_KEY_ALGORITHM');
+  let bits: 256 | 512;
+  switch (oid) {
+    case '1.2.643.7.1.1.1.1':
+      bits = 256;
+      break;
+    case '1.2.643.7.1.1.1.2':
+      bits = 512;
+      break;
+    default:
+      throw new CryptoProError('signing', 'UNSUPPORTED_KEY_ALGORITHM');
+  }
   const hash =
     bits === 256
       ? hash256Schema.safeParse(hashes.hash256)
@@ -170,13 +173,25 @@ export async function signHashes(
     'certificate',
     'CERTIFICATE_SEARCH_FAILED',
     async () => {
-      for await (const item of matchingCertificates(filters)) {
-        if (
-          item.certificate.thumbprint.toUpperCase() === thumbprint.toUpperCase()
-        )
-          return item;
-      }
-      throw new CryptoProError('certificate', 'NO_CERT');
+      const candidates = await getValidCertificates();
+      const certificate = candidates.find((candidate) => {
+        const names = readCertificateNames(
+          candidate.subjectName,
+          candidate.issuerName,
+        );
+        return (
+          matchesCertificate(names, filters) &&
+          candidate.thumbprint.toUpperCase() === thumbprint.toUpperCase()
+        );
+      });
+      if (!certificate) throw new CryptoProError('certificate', 'NO_CERT');
+      return {
+        certificate,
+        names: readCertificateNames(
+          certificate.subjectName,
+          certificate.issuerName,
+        ),
+      };
     },
   );
 
@@ -201,13 +216,17 @@ export async function signHashes(
     }),
   );
 
-  const signatures: string[] = [];
-  for (const hash of hashes) {
-    signal?.throwIfAborted();
-    signatures.push(
-      await signSelectedHash(certificate, hash, parameters, signal),
-    );
-  }
+  const signatures = await hashes.reduce<Promise<string[]>>(
+    async (previous, hash) => {
+      const result = await previous;
+      signal?.throwIfAborted();
+      result.push(
+        await signSelectedHash(certificate, hash, parameters, signal),
+      );
+      return result;
+    },
+    Promise.resolve([]),
+  );
   signal?.throwIfAborted();
   return { signatures, certificate: publicCertificate };
 }

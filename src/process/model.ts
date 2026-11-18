@@ -50,21 +50,20 @@ export interface ProcessState {
   busy: boolean;
 }
 
-export const initialState = (inquiryId: string): ProcessState => ({
-  inquiryId,
-  settings: defaultSettings,
-  screen: inquiryId
-    ? { process: 'START' }
-    : {
-        process: 'STATUS',
-        screen: {
-          level: 'WARNING',
-          title: 'Ссылка недействительна',
-          message: 'Откройте ссылку из SMS',
-        },
+export const initialState = (inquiryId: string): ProcessState => {
+  let screen: DisplayScreen = { process: 'START' };
+  if (!inquiryId) {
+    screen = {
+      process: 'STATUS',
+      screen: {
+        level: 'WARNING',
+        title: 'Ссылка недействительна',
+        message: 'Откройте ссылку из SMS',
       },
-  busy: false,
-});
+    };
+  }
+  return { inquiryId, settings: defaultSettings, screen, busy: false };
+};
 
 // Запоминает валидный ответ и обновляет session или token для соответствующего шага.
 export function saveResponse(

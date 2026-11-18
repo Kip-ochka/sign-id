@@ -6,14 +6,14 @@ const registry = (
   'default' in database ? database.default : database
 ) as Record<string, { source?: string; extensions?: string[] }>;
 
-for (const [type, { source, extensions }] of Object.entries(registry)) {
-  for (const extension of extensions ?? []) {
+Object.entries(registry).forEach(([type, { source, extensions }]) => {
+  extensions?.forEach((extension) => {
     const previous = mimeByExtension.get(extension);
     if (!previous || previous === binaryMime || source === 'iana') {
       mimeByExtension.set(extension, type);
     }
-  }
-}
+  });
+});
 
 const rasterHeaders: Readonly<Record<string, (binary: string) => boolean>> = {
   'image/png': (binary) => binary.startsWith('\x89PNG\r\n\x1a\n'),
@@ -47,11 +47,12 @@ export function createDocumentFile({
   const type = mimeByExtension.get(extension) ?? binaryMime;
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   const file = new File([bytes], filename + suffix, { type });
-  const kind = rasterHeaders[type]?.(binary)
-    ? 'image'
-    : type === 'application/pdf' && binary.startsWith('%PDF-')
-      ? 'pdf'
-      : undefined;
+  let kind: 'image' | 'pdf' | undefined;
+  if (rasterHeaders[type]?.(binary)) {
+    kind = 'image';
+  } else if (type === 'application/pdf' && binary.startsWith('%PDF-')) {
+    kind = 'pdf';
+  }
   return { file, kind } as const;
 }
 

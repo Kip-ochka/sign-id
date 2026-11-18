@@ -15,8 +15,6 @@ import { StartScreen } from './screens/start/StartScreen';
 import { StatusScreen } from './screens/status/StatusScreen';
 import { WaitingScreen } from './screens/waiting/WaitingScreen';
 
-const navigate = (url: string) => window.location.assign(url);
-
 function ProcessScreen() {
   const { current } = useSigningNavigation();
   const {
@@ -29,28 +27,29 @@ function ProcessScreen() {
     },
     commands,
   } = useSigningProcess();
-  const activate = useStatusActions(current, commands.back, navigate);
-  const certificates: CertificateList = signatureCertificates
-    ? {
-        status: 'loaded',
-        options: signatureCertificates.map((certificate) => ({
-          id: certificate.thumbprint,
-          title:
-            [
-              certificate.person?.last_name,
-              certificate.person?.first_name,
-              certificate.person?.middle_name,
-            ]
-              .filter(Boolean)
-              .join(' ') || certificate.serial_number,
-          organization: certificate.organization?.name ?? '',
-          serial: certificate.serial_number,
-          expires: certificate.expires_at
-            ? new Date(certificate.expires_at).toLocaleDateString('ru-RU')
-            : '',
-        })),
-      }
-    : { status: 'loading' };
+  const activate = useStatusActions(current, commands.back);
+  let certificates: CertificateList = { status: 'loading' };
+  if (signatureCertificates) {
+    certificates = {
+      status: 'loaded',
+      options: signatureCertificates.map((certificate) => ({
+        id: certificate.thumbprint,
+        title:
+          [
+            certificate.person?.last_name,
+            certificate.person?.first_name,
+            certificate.person?.middle_name,
+          ]
+            .filter(Boolean)
+            .join(' ') || certificate.serial_number,
+        organization: certificate.organization?.name ?? '',
+        serial: certificate.serial_number,
+        expires: certificate.expires_at
+          ? new Date(certificate.expires_at).toLocaleDateString('ru-RU')
+          : '',
+      })),
+    };
+  }
 
   switch (current.process) {
     case 'START':
@@ -67,17 +66,15 @@ function ProcessScreen() {
       );
     case 'SETTING': {
       const progress = new Map<string, SettingProgress>();
-      for (const stage of settingStages) {
+      settingStages.forEach((stage) => {
         const result = settingProgress?.[stage];
-        if (!result) continue;
-        progress.set(stage, {
-          state: result.state,
-          onDetails:
-            result.state === 'ERROR'
-              ? () => void commands.showSettingError(stage)
-              : undefined,
-        });
-      }
+        if (!result) return;
+        const stageProgress: SettingProgress = { state: result.state };
+        if (result.state === 'ERROR') {
+          stageProgress.onDetails = () => void commands.showSettingError(stage);
+        }
+        progress.set(stage, stageProgress);
+      });
       return (
         <SettingScreen
           response={current}

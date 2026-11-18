@@ -309,16 +309,17 @@ describe('поиск сертификатов', () => {
         issuer: { ogrn: '001 002' },
       },
     ]);
-    for (const person of [
+    await [
       { snils: '12345678901' },
       { snils: '-' },
       { first_name: 'Иван' },
       { middle_name: 'Иванович' },
-    ]) {
+    ].reduce(async (previous, person) => {
+      await previous;
       await expect(findCertificates({ person })).rejects.toMatchObject({
         code: 'NO_CERT',
       });
-    }
+    }, Promise.resolve());
     mockSigning();
     const { certificate: metadata } = await signHash({ ...input, filters });
     expect(metadata.person?.first_name).toBe('Иван  Иванович');
@@ -563,18 +564,17 @@ describe('последовательная подпись документов',
         if (failure === 'операция отменена') controller.abort();
         return failure === 'невалидная подпись' ? 'broken!' : 'YQ==';
       });
+      let expectedError: { name?: string; code?: string } = {
+        code: 'BASE64_ERROR',
+      };
+      if (failure === 'операция отменена') {
+        expectedError = { name: 'AbortError' };
+      } else if (failure === 'токен извлечён') {
+        expectedError = { code: 'SIGN_HASH_FAILED' };
+      }
       await expect(
         signHashes(input, documents, controller.signal),
-      ).rejects.toMatchObject(
-        failure === 'операция отменена'
-          ? { name: 'AbortError' }
-          : {
-              code:
-                failure === 'токен извлечён'
-                  ? 'SIGN_HASH_FAILED'
-                  : 'BASE64_ERROR',
-            },
-      );
+      ).rejects.toMatchObject(expectedError);
       expect(signed.SignHash).toHaveBeenCalledTimes(2);
     },
   );

@@ -140,20 +140,17 @@ function route(replies: Record<string, PendingReply[]>) {
 }
 
 const renderers = new Set<ReactTestRenderer>();
+const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+const openExternalProcess = jest.fn();
 
 function makeProcess(inquiryId = 'synthetic-id', settingCache?: SettingCache) {
-  const navigate = jest.fn();
   let current!: ReturnType<typeof useProcess>;
   let activate!: ReturnType<typeof useStatusActions>;
   const displayed: string[] = [];
 
   function Probe() {
     current = useProcess(inquiryId, settingCache);
-    activate = useStatusActions(
-      current.state.screen,
-      current.commands.back,
-      navigate,
-    );
+    activate = useStatusActions(current.state.screen, current.commands.back);
     displayed.push(current.state.screen.process);
     return null;
   }
@@ -170,7 +167,7 @@ function makeProcess(inquiryId = 'synthetic-id', settingCache?: SettingCache) {
       renderers.delete(tree);
     },
     displayed,
-    navigate,
+    openExternalProcess,
     snapshot: () => current.state,
   };
 }
@@ -184,6 +181,11 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
+  openExternalProcess.mockClear();
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: { location: { assign: openExternalProcess } },
+  });
   jest.useFakeTimers();
   sessionStorage.clear();
   plugin.mockReset().mockResolvedValue(undefined);
@@ -196,12 +198,17 @@ beforeEach(() => {
   }));
 });
 afterEach(() => {
-  for (const tree of renderers) act(() => tree.unmount());
+  renderers.forEach((tree) => act(() => tree.unmount()));
   renderers.clear();
   httpClient.defaults.adapter = originalAdapter;
   jest.restoreAllMocks();
   sessionStorage.clear();
   jest.useRealTimers();
+  if (originalWindow) {
+    Object.defineProperty(globalThis, 'window', originalWindow);
+  } else {
+    Reflect.deleteProperty(globalThis, 'window');
+  }
 });
 
 test.each(['', '?id=', '?id=%20', '?id=one&id=two'])(
@@ -376,23 +383,15 @@ test('новый SETTING и SIGNING заменяют только соответ
     const process = makeProcess();
     await Promise.resolve();
     const { snapshot } = process;
-    const prepare = async () => ({
-      event: 'signing' as const,
-      payload: {
-        documents: signingProcess.screen.lists.documents,
-        certificates: [],
-      },
-      files: { signatures: [], certificates: [] },
-    });
     await process.commands.start();
     await process.commands.checkSetting();
-    await process.commands.submitSignature(prepare);
+    await process.commands.submitSigning('SYNTHETIC');
     expect(snapshot()).toMatchObject({
       token: signingProcess.token,
       session: nextSetting.session,
     });
     await process.commands.checkSetting();
-    await process.commands.submitSignature(prepare);
+    await process.commands.submitSigning('SYNTHETIC');
     await process.commands.back();
     expect(snapshot()).toMatchObject({
       token: nextSigning.token,
@@ -443,14 +442,7 @@ test.each([
       });
       await Promise.resolve();
       await process.commands.start();
-      const sign = process.commands.submitSignature(async () => ({
-        event: 'signing',
-        payload: {
-          documents: signingProcess.screen.lists.documents,
-          certificates: [],
-        },
-        files: { certificates: [], signatures: [] },
-      }));
+      const sign = process.commands.submitSigning('SYNTHETIC');
       await responding.promise;
       expect(process.snapshot()).toMatchObject({
         screen: signingProcess,
@@ -528,7 +520,7 @@ test('401 от справочника ошибок отключает Session-id
     expect(keys()).toEqual(['settings', 'start', 'ready', 'SERVICE_UNAVAL']);
     expect(sessions('SERVICE_UNAVAL')).toEqual([settingProcess.session]);
     expect(process.snapshot().session).toBeNull();
-    await process.commands.retry();
+    await process.activate('accent');
     expect(sessions('settings')).toEqual([null, null]);
     expect(sessions('start')).toEqual([null, null]);
     expect(process.snapshot().screen).toEqual(signingProcess);
@@ -664,8 +656,13 @@ test.each([
         certificate: 'NO_CERT',
       }[stage];
       const error = new CryptoProError(stage, code);
-      const failedStage =
-        stage === 'csp' ? 'program' : stage === 'plugin' ? 'extension' : stage;
+      const failedStages = {
+        csp: 'program',
+        plugin: 'extension',
+        extension: 'extension',
+        certificate: 'certificate',
+      } as const;
+      const failedStage = failedStages[stage];
       if (failedStage === 'extension') plugin.mockRejectedValueOnce(error);
       else if (failedStage === 'program') csp.mockRejectedValueOnce(error);
       else certificates.mockRejectedValueOnce(error);
@@ -901,14 +898,17 @@ test.each(['start', 'status', 'document'])(
             : 'RESPONSE_ERROR',
         ],
       ];
-      for (const [reply, key] of cases) {
+      await cases.reduce(async (previous, [reply, key]) => {
+        await previous;
+        let startReply: Reply = { data: signingProcess };
+        if (endpoint === 'start') {
+          startReply = { ...reply, requestId: 'origin' };
+        } else if (endpoint === 'status') {
+          startReply = { data: task };
+        }
         const { keys } = route({
           settings: [{ data: settings }],
-          start: [
-            endpoint === 'start'
-              ? { ...reply, requestId: 'origin' }
-              : { data: endpoint === 'status' ? task : signingProcess },
-          ],
+          start: [startReply],
           [key]: [{ data: dictionaryStatus, requestId: 'dictionary' }],
           ...(endpoint === 'start'
             ? {}
@@ -931,7 +931,7 @@ test.each(['start', 'status', 'document'])(
             : 'origin',
         );
         expect(snapshot().screen).toEqual(dictionaryStatus);
-      }
+      }, Promise.resolve());
     }),
 );
 
@@ -1160,15 +1160,26 @@ test('code/stage: известные ошибки CryptoPro используют
     const process = makeProcess();
     await Promise.resolve();
     const { snapshot } = process;
+    certificates.mockRejectedValueOnce(
+      new CryptoProError('certificate', '0x80004005'),
+    );
     await process.commands.start();
-    await process.commands.reportCryptoError('0x80004005', 'setup');
+    expect(snapshot().screen).toEqual(dictionaryStatus);
+    expect(snapshot().errorKey).toBe('E_FAIL');
     await process.commands.back();
-    await process.commands.reportCryptoError('0x80004005', 'signing');
+    sign.mockRejectedValueOnce(new CryptoProError('signing', '0x80004005'));
+    await process.commands.submitCheck('SYNTHETIC');
+    expect(snapshot().screen).toEqual(dictionaryStatus);
+    expect(snapshot().errorKey).toBe('SIGN_FAILED');
+    certificates.mockRejectedValueOnce(
+      new CryptoProError('certificate', 'Access denied'),
+    );
     await process.commands.back();
-    await process.commands.reportCryptoError('Access denied', 'setup');
     expect(snapshot().screen).toEqual(localFallback);
+    certificates.mockRejectedValueOnce(
+      new CryptoProError('certificate', 'unexpected'),
+    );
     await process.commands.back();
-    await process.commands.reportCryptoError('unexpected', 'setup');
     expect(snapshot().screen).toEqual(localFallback);
     expect(keys()).toEqual(['settings', 'start', 'E_FAIL', 'SIGN_FAILED']);
   }));
@@ -1218,6 +1229,23 @@ test('ErrorBoundary показывает локальный STATUS и возвр
   expect(keys()).toEqual(['settings', 'start']);
 });
 
+test.each([settingProcess, checkProcess, signingProcess, statusProcess])(
+  'ответ START → $process меняет экран без открытия внешнего процесса',
+  async (response) =>
+    act(async () => {
+      route({
+        settings: [{ data: settings }],
+        start: [{ data: response }],
+      });
+      const process = makeProcess();
+      await Promise.resolve();
+      await process.commands.start();
+      expect(process.snapshot().screen).toEqual(response);
+      expect(process.displayed).toContain(response.process);
+      expect(process.openExternalProcess).not.toHaveBeenCalled();
+    }),
+);
+
 test.each([undefined, 0, 10])(
   'STATUS timer=%s и ручное действие выполняют URL только один раз',
   async (timer) =>
@@ -1228,13 +1256,15 @@ test.each([undefined, 0, 10])(
       });
       const process = makeProcess();
       await Promise.resolve();
-      const { navigate } = process;
+      const { openExternalProcess } = process;
       await process.commands.start();
       await jest.advanceTimersByTimeAsync(timer ?? 50);
-      expect(navigate).toHaveBeenCalledTimes(timer === undefined ? 0 : 1);
+      expect(openExternalProcess).toHaveBeenCalledTimes(
+        timer === undefined ? 0 : 1,
+      );
       await process.activate('accent');
-      expect(navigate).toHaveBeenCalledTimes(1);
-      expect(navigate).toHaveBeenCalledWith(
+      expect(openExternalProcess).toHaveBeenCalledTimes(1);
+      expect(openExternalProcess).toHaveBeenCalledWith(
         'https://next.example.test/process?step=confirm',
       );
     }),
@@ -1252,16 +1282,16 @@ test.each(['WARNING', 'ERROR'])(
       route({ settings: [{ data: settings }], start: [{ data: status }] });
       const process = makeProcess();
       await Promise.resolve();
-      const { snapshot, navigate } = process;
+      const { snapshot, openExternalProcess } = process;
       await process.commands.start();
 
       expect(jest.getTimerCount()).toBe(0);
       await jest.runAllTimersAsync();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(openExternalProcess).not.toHaveBeenCalled();
       expect(snapshot().screen).toEqual(status);
 
       await process.activate('accent');
-      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(openExternalProcess).toHaveBeenCalledTimes(1);
     }),
 );
 
@@ -1286,14 +1316,14 @@ test.each([
       });
       const process = makeProcess();
       await Promise.resolve();
-      const { snapshot, navigate } = process;
+      const { snapshot, openExternalProcess } = process;
       await process.commands.start();
       expect(canActivate(accent)).toBe(false);
       await process.activate('accent');
       await jest.runAllTimersAsync();
       expect(snapshot().screen).toEqual(screen);
       expect(keys()).toEqual(['settings', 'start']);
-      expect(navigate).not.toHaveBeenCalled();
+      expect(openExternalProcess).not.toHaveBeenCalled();
       expect(jest.getTimerCount()).toBe(0);
     }),
 );
@@ -1323,7 +1353,7 @@ test.each(['timer', 'manual', 'stop', 'back'])(
       });
       const process = makeProcess();
       await Promise.resolve();
-      const { snapshot, navigate } = process;
+      const { snapshot, openExternalProcess } = process;
       await process.commands.start();
       await process.commands.checkSetting();
       expect(snapshot().previousProcess).toBe('SETTING');
@@ -1338,9 +1368,11 @@ test.each(['timer', 'manual', 'stop', 'back'])(
       expect(snapshot().previousProcess).toBe(
         mode === 'timer' || mode === 'back' ? 'STATUS' : 'SETTING',
       );
-      expect(navigate).toHaveBeenCalledTimes(mode === 'manual' ? 1 : 0);
-      // Таймер срока сессии продолжает работать независимо от STATUS.
-      expect(jest.getTimerCount()).toBe(1);
+      expect(openExternalProcess).toHaveBeenCalledTimes(
+        mode === 'manual' ? 1 : 0,
+      );
+      // Storage живёт независимо от экрана; таймер Context снимается при unmount.
+      expect(jest.getTimerCount()).toBe(mode === 'stop' ? 1 : 2);
     }),
 );
 
@@ -1402,25 +1434,17 @@ test('поздняя подпись после BACK игнорируется и 
     const { snapshot } = process;
     await process.commands.start();
     const prepared = deferred<{
-      event: 'signing';
-      payload: {
-        documents: typeof signingProcess.screen.lists.documents;
-        certificates: [];
-      };
-      files: { signatures: []; certificates: [] };
+      signatures: string[];
+      certificate: typeof signedCertificate;
     }>();
-    const prepare = jest.fn(() => prepared.promise);
-    const run = process.commands.submitSignature(prepare);
-    await process.commands.submitSignature(prepare);
-    expect(prepare).toHaveBeenCalledTimes(1);
+    signDocuments.mockReturnValueOnce(prepared.promise);
+    const run = process.commands.submitSigning('SYNTHETIC');
+    await process.commands.submitSigning('SYNTHETIC');
+    expect(signDocuments).toHaveBeenCalledTimes(1);
     await process.commands.back();
     prepared.resolve({
-      event: 'signing',
-      payload: {
-        documents: signingProcess.screen.lists.documents,
-        certificates: [],
-      },
-      files: { signatures: [], certificates: [] },
+      signatures: signingProcess.screen.lists.documents.map(() => 'YWJj'),
+      certificate: signedCertificate,
     });
     await run;
     expect(snapshot().screen).toEqual(signingProcess);
@@ -1466,7 +1490,7 @@ test('явный повтор после второго 401 восстанавл
     const { snapshot } = process;
     await process.commands.start();
     expect(snapshot().errorKey).toBe('RESPONSE_ERROR');
-    await process.commands.retry();
+    await process.activate('accent');
     expect(keys().filter((key) => key === 'start')).toHaveLength(4);
     expect(snapshot().screen).toEqual(checkProcess);
   }));
@@ -1533,19 +1557,21 @@ test('CHECK подписывает по клику и повторяет multipa
       ],
     });
     expect(json).not.toMatch(/certificate_base64|signatures|YWJj|Y2VydA/);
-    for (const form of forms) {
-      expect(await (form.get('request') as File).text()).toBe(json);
-      const file = form.get('signatures') as File;
-      expect(file.name).toBe('test.sig');
-      expect(file.type).toBe('application/pkcs7-signature');
-      expect(await file.text()).toBe('abc');
-      const certificate = form.get('certificates') as File;
-      expect(certificate.name).toBe('01.b64');
-      expect(certificate.type).toBe('text/plain');
-      expect(await certificate.text()).toBe(
-        signedCertificate.certificate_base64,
-      );
-    }
+    await Promise.all(
+      forms.map(async (form) => {
+        expect(await (form.get('request') as File).text()).toBe(json);
+        const file = form.get('signatures') as File;
+        expect(file.name).toBe('test.sig');
+        expect(file.type).toBe('application/pkcs7-signature');
+        expect(await file.text()).toBe('abc');
+        const certificate = form.get('certificates') as File;
+        expect(certificate.name).toBe('01.b64');
+        expect(certificate.type).toBe('text/plain');
+        expect(await certificate.text()).toBe(
+          signedCertificate.certificate_base64,
+        );
+      }),
+    );
     expect(keys()).toEqual([
       'settings',
       'start',
@@ -1791,23 +1817,25 @@ test('SIGNING отправляет готовые файлы повторно п
       certificates: [metadata],
     });
     expect(json).not.toMatch(/certificate_base64|signatures/);
-    for (const form of forms) {
-      expect(await (form.get('request') as File).text()).toBe(json);
-      const files = form.getAll('signatures') as File[];
-      expect(files.map(({ name, type }) => [name, type])).toEqual(
-        ['doc-1.sig', 'doc-2.sig'].map((name) => [
-          name,
-          'application/pkcs7-signature',
-        ]),
-      );
-      expect(await Promise.all(files.map((file) => file.text()))).toEqual([
-        'a',
-        'b',
-      ]);
-      const certs = form.getAll('certificates') as File[];
-      expect(certs.map(({ name }) => name)).toEqual(['01.b64']);
-      expect(await certs[0].text()).toBe(certificate_base64);
-    }
+    await Promise.all(
+      forms.map(async (form) => {
+        expect(await (form.get('request') as File).text()).toBe(json);
+        const files = form.getAll('signatures') as File[];
+        expect(files.map(({ name, type }) => [name, type])).toEqual(
+          ['doc-1.sig', 'doc-2.sig'].map((name) => [
+            name,
+            'application/pkcs7-signature',
+          ]),
+        );
+        expect(await Promise.all(files.map((file) => file.text()))).toEqual([
+          'a',
+          'b',
+        ]);
+        const certs = form.getAll('certificates') as File[];
+        expect(certs.map(({ name }) => name)).toEqual(['01.b64']);
+        expect(await certs[0].text()).toBe(certificate_base64);
+      }),
+    );
     expect(process.displayed).toContain('WAITING');
     expect(process.snapshot()).toMatchObject({
       screen: next,
@@ -1880,15 +1908,13 @@ test.each([undefined, 'NO_CERT', '0x80004005', 'ETIMEDOUT'])(
       expect(process.snapshot().screen).toEqual(signingProcess);
       expect(certificates).toHaveBeenCalledTimes(2);
       expect(signDocuments).toHaveBeenCalledTimes(code ? 1 : 0);
-      expect(keys()).toEqual([
-        'settings',
-        'start',
-        ...(code === 'ETIMEDOUT'
-          ? ['signing', 'RESPONSE_ERROR']
-          : code === '0x80004005'
-            ? ['SIGN_FAILED']
-            : ['NO_CERT']),
-      ]);
+      let expectedCalls = ['NO_CERT'];
+      if (code === 'ETIMEDOUT') {
+        expectedCalls = ['signing', 'RESPONSE_ERROR'];
+      } else if (code === '0x80004005') {
+        expectedCalls = ['SIGN_FAILED'];
+      }
+      expect(keys()).toEqual(['settings', 'start', ...expectedCalls]);
     }),
 );
 
@@ -1955,4 +1981,51 @@ test('сохранённая сессия используется на START и
         .map(({ config }) => config.headers.get('X-integrity-token')),
     ).toEqual([signingProcess.token, signingProcess.token]);
     expect(sessionStorage.read()).toBeUndefined();
+    expect(process.snapshot().session).toBeUndefined();
   }));
+
+test('Context очищает восстановленную сессию по TTL без новых запросов', async () =>
+  act(async () => {
+    sessionStorage.save('restored-session');
+    await jest.advanceTimersByTimeAsync(1000);
+    const { keys } = route({
+      settings: [{ data: settings }],
+      start: [{ data: signingProcess }],
+    });
+    const process = makeProcess();
+    await Promise.resolve();
+    await process.commands.start();
+    await jest.advanceTimersByTimeAsync(sessionTtl - 1001);
+    expect(process.snapshot().session).toBe('restored-session');
+    await jest.advanceTimersByTimeAsync(1);
+    expect(process.snapshot().session).toBeUndefined();
+    expect(sessionStorage.read()).toBeUndefined();
+    expect(keys()).toEqual(['settings', 'start']);
+  }));
+
+test.each([settingProcess.session, 'replacement-session'])(
+  'новый SETTING продлевает TTL Context для session=%s',
+  async (session) =>
+    act(async () => {
+      route({
+        settings: [{ data: settings }],
+        start: [{ data: settingProcess }],
+        ready: [{ data: { ...settingProcess, session } }],
+      });
+      const process = makeProcess('synthetic-id', {
+        has: () => false,
+        save: jest.fn(),
+      });
+      await Promise.resolve();
+      await process.commands.start();
+      await jest.advanceTimersByTimeAsync(sessionTtl / 2);
+      await process.commands.checkSetting();
+      await jest.advanceTimersByTimeAsync(sessionTtl / 2);
+      expect(process.snapshot().session).toBe(session);
+      await jest.advanceTimersByTimeAsync(sessionTtl / 2 - 1);
+      expect(process.snapshot().session).toBe(session);
+      await jest.advanceTimersByTimeAsync(1);
+      expect(process.snapshot().session).toBeUndefined();
+      expect(sessionStorage.read()).toBeUndefined();
+    }),
+);

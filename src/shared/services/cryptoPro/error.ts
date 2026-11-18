@@ -26,15 +26,17 @@ export class CryptoProError extends Error {
     code: string,
     cause?: unknown,
   ) {
-    const originalMessage =
-      typeof cause === 'string'
-        ? cause
-        : typeof cause === 'object' &&
-            cause !== null &&
-            'message' in cause &&
-            typeof cause.message === 'string'
-          ? cause.message
-          : '';
+    let originalMessage = '';
+    if (typeof cause === 'string') {
+      originalMessage = cause;
+    } else if (
+      typeof cause === 'object' &&
+      cause !== null &&
+      'message' in cause &&
+      typeof cause.message === 'string'
+    ) {
+      originalMessage = cause.message;
+    }
     super(originalMessage || code, { cause });
     this.name = 'CryptoProError';
     this.sourceCode = readSourceCode(cause, originalMessage);

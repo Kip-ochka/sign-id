@@ -27,20 +27,20 @@ function readDn(dn: string) {
   // CAdES может возвращать локализованные имена атрибутов и экранированные значения.
   const attribute =
     /\s*([\p{L}\d_.]+(?:[ \t]+[\p{L}\d_.]+)*)\s*=\s*(?:"((?:[^"\\]|""|\\.)*)"|((?:[^",;+\\]|\\.)*?))(?:\s*([,;+])|\s*$)/guy;
-  for (let offset = 0; offset < dn.length;) {
-    const match = attribute.exec(dn);
-    if (!match) throw new Error('Некорректное имя сертификата');
+  let offset = 0;
+  Array.from(dn.matchAll(attribute)).forEach((match) => {
     const [, key, quoted, unquoted, separator] = match;
     const value = decodeEscapes(quoted?.replaceAll('""', '"') ?? unquoted);
     const name = key.toUpperCase().replace(/^OID\./, '');
     const values = attributes.get(name) ?? [];
     values.push(value);
     attributes.set(name, values);
-    offset = attribute.lastIndex;
+    offset = match.index + match[0].length;
     if (separator && !dn.slice(offset).trim()) {
       throw new Error('Некорректное имя сертификата');
     }
-  }
+  });
+  if (offset !== dn.length) throw new Error('Некорректное имя сертификата');
   return attributes;
 }
 
@@ -49,7 +49,7 @@ function readFields<K extends string>(
   mapping: Record<K, readonly [string, string]>,
 ) {
   const fields: Partial<Record<K, string>> = {};
-  for (const key of Object.keys(mapping) as K[]) {
+  (Object.keys(mapping) as K[]).forEach((key) => {
     const [oid, alias] = mapping[key];
     const values = new Set([
       ...(attributes.get(oid) ?? []),
@@ -57,7 +57,7 @@ function readFields<K extends string>(
     ]);
     const value = values.values().next().value;
     if (values.size === 1 && value?.trim()) fields[key] = value;
-  }
+  });
   return fields;
 }
 

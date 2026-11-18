@@ -18,5 +18,42 @@ export default defineConfig(
     files: ['*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    rules: {
+      'no-nested-ternary': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ForOfStatement',
+          message:
+            'Use array methods or sequential promise operations instead of for…of.',
+        },
+        {
+          selector: 'ForInStatement',
+          message:
+            'Use Object.keys/values/entries and array methods instead of for…in.',
+        },
+        {
+          selector: 'ForStatement',
+          message: 'Use array methods instead of for loops.',
+        },
+        {
+          selector: 'WhileStatement',
+          message:
+            'Use array methods or asynchronous continuation instead of while loops.',
+        },
+        {
+          selector: 'DoWhileStatement',
+          message:
+            'Use array methods or asynchronous continuation instead of do…while loops.',
+        },
+        {
+          selector: ':function[generator=true]',
+          message:
+            'Generators require regenerator-runtime in the target environment.',
+        },
+      ],
+    },
+  },
   prettier,
 );

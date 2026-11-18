@@ -43,10 +43,10 @@ export function SigningScreen({
     busy ||
     pendingDocumentId !== undefined ||
     certificates.status === 'loading';
-  const sign =
-    selected && onSign && documents.length > 0
-      ? () => onSign(selected)
-      : undefined;
+  let sign: (() => void) | undefined;
+  if (selected && onSign && documents.length > 0) {
+    sign = () => onSign(selected);
+  }
 
   return (
     <ScreenCard title={title} message={message} step={step}>

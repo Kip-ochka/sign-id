@@ -23,7 +23,8 @@ export async function checkWorkplace(
   fail: (stage: SettingStage, error: unknown) => Promise<void>,
 ) {
   let certificates: Awaited<ReturnType<typeof findCertificates>> | undefined;
-  for (const stage of settingStages) {
+  const completed = await settingStages.reduce(async (previous, stage) => {
+    if (!(await previous)) return false;
     try {
       signal.throwIfAborted();
       update(stage, 'RUNNING');
@@ -40,10 +41,12 @@ export async function checkWorkplace(
       }
       signal.throwIfAborted();
       update(stage, 'SUCCESS');
+      return true;
     } catch (error) {
       if (!signal.aborted) await fail(stage, error);
-      return;
+      return false;
     }
-  }
+  }, Promise.resolve(true));
+  if (!completed) return;
   return { certificates };
 }

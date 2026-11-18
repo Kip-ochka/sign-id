@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
+import { text } from 'node:stream/consumers';
 import { promisify } from 'node:util';
 import { createServer as createViteServer } from 'vite';
 
@@ -58,9 +59,8 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  const body = chunks.length ? JSON.parse(chunks.join('')) : undefined;
+  const content = await text(request);
+  const body = content ? JSON.parse(content) : undefined;
   requests.push({
     method: request.method,
     path: request.url,

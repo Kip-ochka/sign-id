@@ -89,13 +89,13 @@ export const createStateFormData = (
     });
     formData.append('request', createJSONPart(request));
   }
-  for (const signature of signatures) {
+  signatures.forEach((signature) => {
     const file =
       event === 'check' ? createCheckSignature(signature.base64) : signature;
     formData.append('signatures', createSignatureFile(file));
-  }
-  for (const certificate of certificates) {
+  });
+  certificates.forEach((certificate) => {
     formData.append('certificates', createCertificateFile(certificate));
-  }
+  });
   return formData;
 };

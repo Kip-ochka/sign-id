@@ -28,7 +28,6 @@ export function canActivate(button: ScreenButtonAction) {
 export function useStatusActions(
   screen: DisplayScreen,
   back: (manual: boolean) => void | Promise<void>,
-  navigate: (url: string) => void,
 ) {
   const actionTaken = useRef(false);
   const cancelTimer = useRef<() => void>();
@@ -42,9 +41,10 @@ export function useStatusActions(
       actionTaken.current = true;
       cancelTimer.current?.();
       if (action.type === 'back') return back(manual);
-      navigate(action.url);
+      // Q-11: полный URL открывает внешний процесс. Внутренние экраны меняет Context.
+      window.location.assign(action.url);
     },
-    [back, navigate, screen],
+    [back, screen],
   );
 
   useLayoutEffect(() => {

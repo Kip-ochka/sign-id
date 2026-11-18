@@ -22,9 +22,8 @@ export function StatusScreen({
   const { label, symbol } = levels[level];
   const actions = (['accent', 'secondary'] as const).flatMap((slot) => {
     const button = buttons?.[slot];
-    return button && canActivate(button)
-      ? [{ slot, label: button.message }]
-      : [];
+    if (!button || !canActivate(button)) return [];
+    return [{ slot, label: button.message }];
   });
   return (
     <ScreenCard

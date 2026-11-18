@@ -13,7 +13,7 @@ import type { CheckScreen, SigningScreen } from '../shared/api';
 import { findCertificates } from '../shared/services/cryptoPro/adapter';
 import { checkBrowserPlugin } from '../shared/services/cryptoPro/workplace';
 import { initialState, saveResponse, showFallback, showScreen } from './model';
-import { getCryptoErrorCode, getCryptoErrorKey } from './network';
+import { getCryptoErrorCode, getCryptoErrorKey, schedule } from './network';
 import { pollUntilProcess } from './polling';
 import {
   loadErrorScreen,
@@ -58,6 +58,31 @@ export function useProcess(
   }));
   const activeRequest = useRef<AbortController>();
   const restartedAfter401 = useRef(false);
+
+  useLayoutEffect(() => {
+    const session = state.session;
+    if (!session) return;
+    const entry = sessionStorage.readEntry();
+    let cancel: () => void;
+    const expire = () => {
+      const current = sessionStorage.readEntry();
+      // Повторный SETTING может продлить срок даже для прежнего session id.
+      if (current?.id === session) {
+        cancel = schedule(expire, Math.max(0, current.expiresAt - Date.now()));
+        return;
+      }
+      setState((previous) =>
+        previous.session === session
+          ? { ...previous, session: current?.id }
+          : previous,
+      );
+    };
+    cancel = schedule(
+      expire,
+      Math.max(0, (entry?.expiresAt ?? Date.now()) - Date.now()),
+    );
+    return () => cancel();
+  }, [state.session, state.lastResponse]);
 
   const stop = useCallback(() => {
     activeRequest.current?.abort();
@@ -134,73 +159,72 @@ export function useProcess(
 
   // Ответ с task запускает polling. Ответ с process определяет следующий экран.
   const applyResponse = useCallback(
-    async (reply: ProcessReply, options: RequestOptions, readySent = false) => {
+    async function applyReply(
+      reply: ProcessReply,
+      options: RequestOptions,
+      readySent = false,
+    ): Promise<void> {
       const { signal } = options;
-      while (!signal.aborted) {
-        const { data, requestId } = reply;
-        if (data.kind === 'task') {
-          reply = await pollUntilProcess(data.response, options, (task) => {
-            setState((previous) => {
-              const next = saveResponse(previous, task);
-              return previous.screen.process === 'WAITING'
-                ? next
-                : showScreen(next, { process: 'WAITING' });
-            });
+      if (signal.aborted) return;
+      const { data, requestId } = reply;
+      if (data.kind === 'task') {
+        const next = await pollUntilProcess(data.response, options, (task) => {
+          setState((previous) => {
+            const next = saveResponse(previous, task);
+            if (previous.screen.process === 'WAITING') return next;
+            return showScreen(next, { process: 'WAITING' });
           });
-          continue;
-        }
-        if (data.kind === 'unsupported-mode') {
-          setState((previous) =>
-            showScreen(previous, { ...data.fallback }, requestId),
-          );
-          return;
-        }
-
-        const screen = data.response;
-        if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
-          setState((previous) => saveResponse(previous, screen));
-          await openSignatureScreen(screen, options);
-          return;
-        }
-        if (screen.process === 'SETTING') {
-          // ready по кэшу использует новую сессию в той же операции.
-          sessionStorage.save(screen.session);
-          options.session = screen.session;
-          if (readySent) {
-            setState((previous) =>
-              showFallback(saveResponse(previous, screen)),
-            );
-            return;
-          }
-          // Сохраняем session, оставляя текущий экран до решения по кэшу.
-          setState((previous) => ({
-            ...saveResponse(previous, screen),
-            settingProgress: undefined,
-            workplaceCertificates: undefined,
-          }));
-          let cached = false;
-          try {
-            cached = await settingCache.has(inquiryId);
-          } catch {
-            // Если кэш недоступен, открываем SETTING для ручной проверки.
-          }
-          signal.throwIfAborted();
-          if (cached) {
-            reply = await requestReady(options);
-            readySent = true;
-            continue;
-          }
-        }
-
-        const errorRequestId =
-          screen.process === 'STATUS' && screen.screen.level !== 'SUCCESS'
-            ? requestId
-            : undefined;
+        });
+        return applyReply(next, options, readySent);
+      }
+      if (data.kind === 'unsupported-mode') {
         setState((previous) =>
-          showScreen(saveResponse(previous, screen), screen, errorRequestId),
+          showScreen(previous, { ...data.fallback }, requestId),
         );
         return;
       }
+
+      const screen = data.response;
+      if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
+        setState((previous) => saveResponse(previous, screen));
+        await openSignatureScreen(screen, options);
+        return;
+      }
+      if (screen.process === 'SETTING') {
+        // ready по кэшу использует новую сессию в той же операции.
+        sessionStorage.save(screen.session);
+        options.session = screen.session;
+        if (readySent) {
+          setState((previous) => showFallback(saveResponse(previous, screen)));
+          return;
+        }
+        // Сохраняем session, оставляя текущий экран до решения по кэшу.
+        setState((previous) => ({
+          ...saveResponse(previous, screen),
+          settingProgress: undefined,
+          workplaceCertificates: undefined,
+        }));
+        let cached = false;
+        try {
+          cached = await settingCache.has(inquiryId);
+        } catch {
+          // Если кэш недоступен, открываем SETTING для ручной проверки.
+        }
+        signal.throwIfAborted();
+        if (cached) {
+          const next = await requestReady(options);
+          return applyReply(next, options, true);
+        }
+      }
+
+      const errorRequestId =
+        screen.process === 'STATUS' && screen.screen.level !== 'SUCCESS'
+          ? requestId
+          : undefined;
+      setState((previous) =>
+        showScreen(saveResponse(previous, screen), screen, errorRequestId),
+      );
+      return;
     },
     [inquiryId, openSignatureScreen, settingCache],
   );
@@ -247,39 +271,39 @@ export function useProcess(
       };
       activeRequest.current = controller;
       setState((previous) => ({ ...previous, busy: true }));
-      let request: (options: RequestOptions) => Promise<T | void> =
-        handleRequest;
-
-      try {
-        while (!signal.aborted) {
-          try {
-            const result = await request(options);
-            if (!signal.aborted) return result;
-          } catch (error) {
-            if (signal.aborted) return;
-            if (!(error instanceof ProcessRequestError)) {
-              setState(showFallback);
-              return;
-            }
-            // После первого 401 начинаем START заново. При повторном показываем ошибку.
-            if (error.unauthorized && !restartedAfter401.current) {
-              restartedAfter401.current = true;
-              setState((previous) =>
-                resetProcess(previous, { process: 'START' }, true),
-              );
-              request = handleStart;
-              continue;
-            }
-            if (error.unauthorized) {
-              setState((previous) => ({
-                ...resetProcess(previous, { process: 'WAITING' }, true),
-                settings: previous.settings,
-              }));
-            }
-            await showError(error.key, options, error.requestId);
+      async function executeRequest(
+        request: (options: RequestOptions) => Promise<T | void>,
+      ): Promise<T | void> {
+        if (signal.aborted) return;
+        try {
+          const result = await request(options);
+          if (!signal.aborted) return result;
+        } catch (error) {
+          if (signal.aborted) return;
+          if (!(error instanceof ProcessRequestError)) {
+            setState(showFallback);
             return;
           }
+          // После первого 401 начинаем START заново. При повторном показываем ошибку.
+          if (error.unauthorized && !restartedAfter401.current) {
+            restartedAfter401.current = true;
+            setState((previous) =>
+              resetProcess(previous, { process: 'START' }, true),
+            );
+            return executeRequest(handleStart);
+          }
+          if (error.unauthorized) {
+            setState((previous) => ({
+              ...resetProcess(previous, { process: 'WAITING' }, true),
+              settings: previous.settings,
+            }));
+          }
+          await showError(error.key, options, error.requestId);
+          return;
         }
+      }
+      try {
+        return await executeRequest(handleRequest);
       } finally {
         if (activeRequest.current === controller) {
           activeRequest.current = undefined;
@@ -327,11 +351,6 @@ export function useProcess(
     },
     [backScreen, openSignatureScreen, restart, run, stop],
   );
-
-  const retry = () => {
-    restartedAfter401.current = false;
-    return restart();
-  };
 
   const recoverFromRenderError = () => {
     if (!inquiryId) return;
@@ -444,9 +463,10 @@ export function useProcess(
       return;
     return submitSignature((signal) => {
       setState((previous) => ({ ...previous, signaturePhase: 'signing' }));
-      return screen.process === 'CHECK'
-        ? prepareCheck(screen, thumbprint, signal)
-        : prepareSigning(screen, thumbprint, signal);
+      if (screen.process === 'CHECK') {
+        return prepareCheck(screen, thumbprint, signal);
+      }
+      return prepareSigning(screen, thumbprint, signal);
     });
   };
 
@@ -460,14 +480,10 @@ export function useProcess(
     return run((options) => requestDocument(documentId, options));
   };
 
-  const reportCryptoError = (code: string, stage: 'setup' | 'signing') =>
-    run((options) => showError(getCryptoErrorKey(code, stage), options));
-
   return {
     state,
     commands: {
       start,
-      retry,
       back,
       checkSetting,
       showSettingError,
@@ -479,9 +495,7 @@ export function useProcess(
         if (state.screen.process === 'SIGNING')
           return submitSelectedCertificate(thumbprint);
       },
-      submitSignature,
       downloadDocument,
-      reportCryptoError,
       recoverFromRenderError,
     },
   };

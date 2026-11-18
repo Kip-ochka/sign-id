@@ -11,10 +11,31 @@ export function WorkActions({
   onAction?: () => void;
 }) {
   const secondary = buttons.secondary;
-  const url =
-    secondary?.process === undefined && secondary?.url
-      ? httpUrl(secondary.url)
-      : undefined;
+  let secondaryAction;
+  if (secondary) {
+    let url: string | undefined;
+    if (secondary.process === undefined && secondary.url) {
+      url = httpUrl(secondary.url);
+    }
+    if (url && !busy) {
+      secondaryAction = (
+        <a
+          className={styles.secondary}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {secondary.message}
+        </a>
+      );
+    } else {
+      secondaryAction = (
+        <button type="button" className={styles.secondary} disabled>
+          {secondary.message}
+        </button>
+      );
+    }
+  }
   return (
     <div className={styles.actions}>
       <button
@@ -25,21 +46,7 @@ export function WorkActions({
       >
         {buttons.accent.message}
       </button>
-      {secondary &&
-        (url && !busy ? (
-          <a
-            className={styles.secondary}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {secondary.message}
-          </a>
-        ) : (
-          <button type="button" className={styles.secondary} disabled>
-            {secondary.message}
-          </button>
-        ))}
+      {secondaryAction}
     </div>
   );
 }

@@ -42,7 +42,7 @@ export async function requestWithRetry<T>(
   retryTimeout: boolean,
 ) {
   const limit = getHttpAttemptLimit(settings);
-  for (let attempt = 1; ; attempt += 1) {
+  async function attemptRequest(attempt: number): Promise<T> {
     signal.throwIfAborted();
     try {
       return await request();
@@ -62,8 +62,10 @@ export async function requestWithRetry<T>(
         ? 1 + Math.floor(Math.random() * retry_addition)
         : 0;
       await wait(retry_time + jitter, signal);
+      return attemptRequest(attempt + 1);
     }
   }
+  return attemptRequest(1);
 }
 
 export function readRequestId(response?: AxiosResponse<unknown>) {

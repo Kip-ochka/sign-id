@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { buffer } from 'node:stream/consumers';
 import type { IncomingHttpHeaders } from 'node:http';
 import { afterAll, beforeAll, beforeEach, expect, test } from '@jest/globals';
 import { AxiosHeaders } from 'axios';
@@ -47,13 +48,12 @@ const received: {
   body: Buffer;
 }[] = [];
 const server = createServer(async (request, response) => {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(chunk);
+  const body = await buffer(request);
   received.push({
     method: request.method,
     url: request.url,
     headers: request.headers,
-    body: Buffer.concat(chunks),
+    body,
   });
 
   if (request.url === `${api}/document`) {
@@ -134,9 +134,9 @@ test.each([undefined, null, ''])(
     await state('check', undefined, files, undefined, session);
     await state('signing', undefined, files, undefined, session);
     expect(received).toHaveLength(7);
-    for (const request of received) {
+    received.forEach((request) => {
       expect(request.headers).not.toHaveProperty('session-id');
-    }
+    });
   },
 );
 
@@ -163,19 +163,19 @@ test.each([settingProcess, signingProcess])(
   async (data) => {
     const routes = [`${api}/state/start`, `${api}/poll/status`];
     const originalResponses = routes.map((route) => jsonResponses.get(route));
-    for (const route of routes) jsonResponses.set(route, data);
+    routes.forEach((route) => jsonResponses.set(route, data));
 
     try {
       const responses = await Promise.all([
         state('start', stateBody),
         pollStatus({ ...stateBody, task: task.task }),
       ]);
-      for (const response of responses) {
+      responses.forEach((response) => {
         expect(parseProcessResult(response.data)).toEqual({
           success: true,
           data: { kind: 'process', response: data },
         });
-      }
+      });
     } finally {
       routes.forEach((route, index) => {
         const original = originalResponses[index];
@@ -378,23 +378,30 @@ test.each([
     });
 
     const signatureFiles = parts.getAll('signatures');
-    for (const [index, part] of signatureFiles.entries()) {
-      const { name, bytes } = expectedSignatures[index];
-      expect(part).toMatchObject({ name, type: 'application/pkcs7-signature' });
-      if (typeof part === 'string') throw new Error('Ожидался файл подписи');
-      expect([...new Uint8Array(await part.arrayBuffer())]).toEqual(bytes);
-    }
+    await Promise.all(
+      signatureFiles.map(async (part, index) => {
+        const { name, bytes } = expectedSignatures[index];
+        expect(part).toMatchObject({
+          name,
+          type: 'application/pkcs7-signature',
+        });
+        if (typeof part === 'string') throw new Error('Ожидался файл подписи');
+        expect([...new Uint8Array(await part.arrayBuffer())]).toEqual(bytes);
+      }),
+    );
 
     const certificateFiles = parts.getAll('certificates');
-    for (const [index, part] of certificateFiles.entries()) {
-      const { serial_number, certificate_base64 } = certificates[index];
-      expect(part).toMatchObject({
-        name: `${serial_number}.b64`,
-        type: 'text/plain',
-      });
-      if (typeof part === 'string')
-        throw new Error('Ожидался файл сертификата');
-      expect(await part.text()).toBe(certificate_base64);
-    }
+    await Promise.all(
+      certificateFiles.map(async (part, index) => {
+        const { serial_number, certificate_base64 } = certificates[index];
+        expect(part).toMatchObject({
+          name: `${serial_number}.b64`,
+          type: 'text/plain',
+        });
+        if (typeof part === 'string')
+          throw new Error('Ожидался файл сертификата');
+        expect(await part.text()).toBe(certificate_base64);
+      }),
+    );
   },
 );

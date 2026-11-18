@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as css from './styles.css';
 import { readInquiryId } from './shared/readInquiryId';
 import {
   NavigationProvider,
@@ -46,6 +47,7 @@ function ProcessRoot() {
 }
 
 export default function App() {
+  useStyles(css);
   const [inquiryId] = useState(() => readInquiryId(window.location.search));
 
   return (

@@ -1,7 +1,7 @@
 import Select from '@sber-site/malachite-kit/esm/components/Select';
 import { useState } from 'react';
 import { Loading } from '../../shared/ui/Loading';
-import styles from '../../shared/ui/Screen.module.css';
+import * as css from '../../shared/ui/Screen.css';
 export type CertificateOption = {
   id: string;
   title: string;
@@ -25,13 +25,12 @@ export function CertificatePicker({
   onSelect: (id: string) => void;
   busy: boolean;
 }) {
+  useStyles(css);
   return (
-    <section className={styles.section} aria-labelledby="certificate-title">
+    <section className="section" aria-labelledby="certificate-title">
       <h2 id="certificate-title">Сертификат</h2>
       {certificates.status === 'unavailable' && (
-        <p className={styles.detail}>
-          Подключение сертификатов пока недоступно.
-        </p>
+        <p className="detail">Подключение сертификатов пока недоступно.</p>
       )}
       {certificates.status === 'loading' && <Loading>Ищем сертификаты</Loading>}
       {certificates.status === 'loaded' && (
@@ -40,7 +39,7 @@ export function CertificatePicker({
             <p role="alert">Подходящие сертификаты не найдены.</p>
           )}
           {certificates.options.length > 0 && (
-            <label className={styles.field}>
+            <label className="field">
               <span>Выберите сертификат</span>
               <Select
                 aria-label="Выберите сертификат"
@@ -61,15 +60,13 @@ export function CertificatePicker({
             </label>
           )}
           {selected && (
-            <div className={styles.certificate}>
+            <div className="certificate">
               <strong>{selected.title}</strong>
               {selected.organization && (
-                <div className={styles.detail}>{selected.organization}</div>
+                <div className="detail">{selected.organization}</div>
               )}
               {selected.expires && (
-                <div className={styles.detail}>
-                  Действует до {selected.expires}
-                </div>
+                <div className="detail">Действует до {selected.expires}</div>
               )}
             </div>
           )}

@@ -4,7 +4,7 @@ import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoin
 import waitIcon from '../assets/WAIT_STATUS.svg';
 import successIcon from '../assets/SUCCESS_STATUS.svg';
 import errorIcon from '../assets/WARNING_STATUS.svg';
-import styles from './SettingItem.module.css';
+import * as css from './SettingItem.css';
 type Props = {
   status: 'WAIT' | 'RUNNING' | 'SUCCESS' | 'ERROR';
   message: string;
@@ -33,26 +33,27 @@ export function SettingItem({
   onDetails,
   disabled,
 }: Props) {
+  useStyles(css);
   const { isDesktop } = useBreakpoints();
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className={styles['sign_setting-item']}>
+    <div className="sign_setting-item">
       <div
         className={
           status === 'ERROR'
-            ? styles['sign_setting-item__error']
-            : styles['sign_setting-item__main']
+            ? 'sign_setting-item__error'
+            : 'sign_setting-item__main'
         }
       >
         <img
-          className={styles['sign_setting-item__icon']}
+          className="sign_setting-item__icon"
           src={icons[status]}
           alt={labels[status]}
         />
         <Text
           tag="p"
           size={isDesktop ? 'md' : 'sm'}
-          className={styles['sign_setting-item__main-text']}
+          className="sign_setting-item__main-text"
           title={message}
         >
           {message}
@@ -61,7 +62,7 @@ export function SettingItem({
           <button
             type="button"
             disabled={disabled}
-            className={styles['sign_settings-item__error-button']}
+            className="sign_settings-item__error-button"
             aria-expanded={onDetails ? undefined : expanded}
             onClick={() => {
               if (onDetails) {
@@ -76,11 +77,7 @@ export function SettingItem({
         )}
       </div>
       {expanded && (
-        <Text
-          tag="p"
-          size="sm"
-          className={styles['sign_setting-item__error-text']}
-        >
+        <Text tag="p" size="sm" className="sign_setting-item__error-text">
           {description}
         </Text>
       )}

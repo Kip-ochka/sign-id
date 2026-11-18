@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import loader from '../assets/loader.svg';
-import styles from './Screen.module.css';
+import * as css from './Screen.css';
 export function Loading({ children }: { children: ReactNode }) {
+  useStyles(css);
   return (
-    <span className={styles.loading} role="status">
-      <img className={styles.spinner} src={loader} alt="" />
+    <span className="loading" role="status">
+      <img className="spinner" src={loader} alt="" />
       {children}
     </span>
   );

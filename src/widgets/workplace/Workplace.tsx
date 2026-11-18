@@ -5,7 +5,7 @@ import type {
 import { ScreenCard } from '../../shared/ui/ScreenCard';
 import { SettingItem } from '../../shared/ui/SettingItem';
 import { WorkActions } from '../../entities/signing';
-import styles from '../../shared/ui/Screen.module.css';
+import * as css from '../../shared/ui/Screen.css';
 export type SettingProgress = {
   state: SettingList['state'] | 'RUNNING';
   onDetails?: () => void;
@@ -26,16 +26,13 @@ export function Workplace({
   progress?: ReadonlyMap<string, SettingProgress>;
   onCheck?: () => void;
 }) {
+  useStyles(css);
   const { title, message, lists, buttons } = response.screen;
   const rows = lists?.testing ?? [];
   return (
     <ScreenCard title={title} message={message}>
       {rows.length > 0 && (
-        <ul
-          className={styles.list}
-          aria-label="Этапы проверки"
-          aria-live="polite"
-        >
+        <ul className="list" aria-label="Этапы проверки" aria-live="polite">
           {rows.map((item, index) => {
             const result = progress?.get(item.name);
             return (
@@ -56,9 +53,7 @@ export function Workplace({
         </ul>
       )}
       {!onCheck && (
-        <p className={styles.detail}>
-          Проверка рабочего места пока недоступна.
-        </p>
+        <p className="detail">Проверка рабочего места пока недоступна.</p>
       )}
       <WorkActions buttons={buttons} busy={busy} onAction={onCheck} />
     </ScreenCard>

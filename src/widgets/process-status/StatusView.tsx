@@ -4,8 +4,8 @@ import warningIcon from '../../shared/assets/warning.svg';
 import type { DisplayScreen } from '../../entities/signing';
 import { canActivate } from '../../process/status';
 import { ScreenCard } from '../../shared/ui/ScreenCard';
-import styles from '../../shared/ui/Screen.module.css';
-import local from './StatusScreen.module.css';
+import * as css from '../../shared/ui/Screen.css';
+import * as localCss from './StatusScreen.css';
 const levels = {
   SUCCESS: { label: 'Успешно' },
   WARNING: { label: 'Внимание' },
@@ -21,6 +21,8 @@ export function StatusView({
   requestId?: string;
   activate: (slot: 'accent' | 'secondary') => void;
 }) {
+  useStyles(css);
+  useStyles(localCss);
   const { title, message, level, buttons } = response.screen;
   const { label } = levels[level];
   const actions = (['accent', 'secondary'] as const).flatMap((slot) => {
@@ -35,7 +37,7 @@ export function StatusView({
       title={title}
       message={message}
       indicator={
-        <div className={local.level} data-level={level}>
+        <div className="level" data-level={level}>
           <img
             src={level === 'SUCCESS' ? successIcon : warningIcon}
             alt={label}
@@ -44,18 +46,18 @@ export function StatusView({
       }
     >
       {requestId && level !== 'SUCCESS' && (
-        <p className={local.requestId}>
+        <p className="requestId">
           Идентификатор запроса <code>{requestId}</code>
         </p>
       )}
       {actions.length > 0 && (
-        <div className={styles.actions}>
+        <div className="actions">
           {actions.map(({ slot, label }) => (
             <Button
               type="button"
               theme={slot === 'accent' ? 'primary' : 'secondary'}
               key={slot}
-              className={slot === 'accent' ? styles.primary : styles.secondary}
+              className={slot === 'accent' ? 'primary' : 'secondary'}
               onClick={() => activate(slot)}
             >
               {label}

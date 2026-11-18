@@ -1,6 +1,6 @@
 import Icon from '@sber-site/malachite-kit/esm/components/Icon';
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
-import styles from './DocumentLink.module.css';
+import * as css from './DocumentLink.css';
 const icons = {
   DOC: 'doc-file',
   PDF: 'pdf-file',
@@ -19,10 +19,11 @@ export function DocumentLink({
   pending?: boolean;
   onClick?: () => void;
 }) {
+  useStyles(css);
   return (
     <button
       type="button"
-      className={styles['document-link']}
+      className="document-link"
       disabled={disabled}
       aria-disabled={pending || undefined}
       aria-busy={pending || undefined}
@@ -37,7 +38,7 @@ export function DocumentLink({
       }}
     >
       <Icon size="24" name={icons[format]} theme="ghost" />
-      <Text tag="span" className={styles['document-link__main-text']}>
+      <Text tag="span" className="document-link__main-text">
         {title}
       </Text>
       <Icon size="24" name="chevron-right-small" theme="ghost" />

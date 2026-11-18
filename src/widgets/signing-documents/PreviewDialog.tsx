@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import styles from '../../shared/ui/Screen.module.css';
-import local from './PreviewDialog.module.css';
+import * as css from '../../shared/ui/Screen.css';
+import * as localCss from './PreviewDialog.css';
 export type DocumentPreview = {
   title: string;
   url: string;
@@ -15,6 +15,8 @@ export function PreviewDialog({
   file: DocumentPreview;
   close: () => void;
 }) {
+  useStyles(css);
+  useStyles(localCss);
   const dialog = useRef<HTMLDialogElement>(null);
   const download = useRef<HTMLAnchorElement>(null);
   const [renderFailed, setRenderFailed] = useState(false);
@@ -39,7 +41,7 @@ export function PreviewDialog({
   return (
     <dialog
       ref={dialog}
-      className={local.preview}
+      className="preview"
       aria-labelledby="preview-title"
       onCancel={(event) => {
         event.preventDefault();
@@ -47,13 +49,13 @@ export function PreviewDialog({
       }}
     >
       <h2 id="preview-title">{file.title}</h2>
-      <div className={styles.actions + ' ' + local.actions}>
-        <button type="button" className={styles.primary} onClick={close}>
+      <div className="actions">
+        <button type="button" className="primary" onClick={close}>
           {file.kind ? 'Закрыть просмотр' : 'Закрыть'}
         </button>
         <a
           ref={download}
-          className={styles.secondary}
+          className="secondary"
           href={file.url}
           download={file.filename}
         >

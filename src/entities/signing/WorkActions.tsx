@@ -1,7 +1,7 @@
 import Button from '@sber-site/malachite-kit/esm/components/Button';
 import type { ScreenButtons } from '../../shared/api';
 import { httpUrl } from '../../shared/lib/httpUrl';
-import styles from '../../shared/ui/Screen.module.css';
+import * as css from '../../shared/ui/Screen.css';
 export function WorkActions({
   buttons,
   busy,
@@ -11,6 +11,7 @@ export function WorkActions({
   busy: boolean;
   onAction?: () => void;
 }) {
+  useStyles(css);
   const secondary = buttons.secondary;
   let secondaryAction;
   if (secondary) {
@@ -21,7 +22,7 @@ export function WorkActions({
     if (url && !busy) {
       secondaryAction = (
         <a
-          className={styles.secondary}
+          className="secondary"
           href={url}
           target="_blank"
           rel="noopener noreferrer"
@@ -31,17 +32,17 @@ export function WorkActions({
       );
     } else {
       secondaryAction = (
-        <Button type="button" className={styles.secondary} disabled>
+        <Button type="button" className="secondary" disabled>
           {secondary.message}
         </Button>
       );
     }
   }
   return (
-    <div className={styles.actions}>
+    <div className="actions">
       <Button
         type="button"
-        className={styles.primary}
+        className="primary"
         disabled={busy || !onAction}
         onClick={onAction}
       >

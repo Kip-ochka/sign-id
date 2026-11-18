@@ -1,7 +1,7 @@
 import type { SigningDocument } from '../../shared/api';
 import { Loading } from '../../shared/ui/Loading';
 import { DocumentLink } from '../../shared/ui/DocumentLink';
-import styles from '../../shared/ui/Screen.module.css';
+import * as css from '../../shared/ui/Screen.css';
 export function DocumentList({
   documents,
   blocked,
@@ -13,11 +13,12 @@ export function DocumentList({
   pendingDocumentId?: string;
   onOpenDocument?: (id: string) => void;
 }) {
+  useStyles(css);
   return (
-    <section className={styles.section} aria-labelledby="documents-title">
+    <section className="section" aria-labelledby="documents-title">
       <h2 id="documents-title">Документы</h2>
       {documents.length === 0 && <p>Нет документов для подписания.</p>}
-      <ul className={styles.list}>
+      <ul className="list">
         {documents.map(({ id, title, format }) => {
           const normalized = format.toUpperCase().replace(/^\./, '');
           let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';

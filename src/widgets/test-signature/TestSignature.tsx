@@ -1,5 +1,5 @@
 import { Link } from '@sber-site/malachite-kit';
-import styles from '../../shared/ui/Screen.module.css';
+import * as css from '../../shared/ui/Screen.css';
 import type { CheckScreen as CheckResponse, Consent } from '../../shared/api';
 import {
   CertificatePicker,
@@ -11,9 +11,10 @@ import { Loading } from '../../shared/ui/Loading';
 import { ScreenCard } from '../../shared/ui/ScreenCard';
 import { WorkActions } from '../../entities/signing';
 function ConsentText({ consent }: { consent: Consent }) {
+  useStyles(css);
   const url = httpUrl(consent.url);
   if (!url || !consent.hypertext) {
-    return <p className={styles.agreement}>{consent.text}</p>;
+    return <p className="agreement">{consent.text}</p>;
   }
   const start = consent.text.indexOf(consent.hypertext);
   const link = (
@@ -28,13 +29,13 @@ function ConsentText({ consent }: { consent: Consent }) {
   );
   if (start < 0) {
     return (
-      <p className={styles.agreement}>
+      <p className="agreement">
         {consent.text} {link}
       </p>
     );
   }
   return (
-    <p className={styles.agreement}>
+    <p className="agreement">
       {consent.text.slice(0, start)}
       {link}
       {consent.text.slice(start + consent.hypertext.length)}

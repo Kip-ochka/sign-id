@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import styles from './ContentWrapper.module.css';
+import * as css from './ContentWrapper.css';
 export function ContentWrapper({ children }: { children: ReactNode }) {
+  useStyles(css);
   return (
-    <main className={styles.sign}>
-      <article className={styles['sign-content']}>{children}</article>
+    <main className="sign">
+      <article className="sign-content">{children}</article>
     </main>
   );
 }

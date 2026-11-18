@@ -5,7 +5,7 @@ import Text from '@sber-site/sbercraft-nova-kit/components/Text';
 import Typography from '@sber-site/malachite-kit/esm/components/Typography';
 import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
 import { ContentWrapper } from './ContentWrapper';
-import styles from './Screen.module.css';
+import * as css from './Screen.css';
 export function ScreenCard({
   title,
   message,
@@ -19,14 +19,15 @@ export function ScreenCard({
   indicator?: ReactNode;
   children: ReactNode;
 }) {
+  useStyles(css);
   const heading = useRef<HTMLHeadingElement>(null);
   const { isDesktop } = useBreakpoints();
   useEffect(() => heading.current?.focus(), [title]);
   return (
     <ContentWrapper>
-      <div className={styles.card}>
+      <div className="card">
         {step && (
-          <div className={styles.step}>
+          <div className="step">
             <Typography.Paragraph>{step}</Typography.Paragraph>
           </div>
         )}
@@ -40,7 +41,7 @@ export function ScreenCard({
           {title}
         </Heading>
         {message && (
-          <Text tag="p" className={styles.message}>
+          <Text tag="p" className="message">
             {message}
           </Text>
         )}

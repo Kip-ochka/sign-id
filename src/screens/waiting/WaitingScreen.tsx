@@ -1,5 +1,5 @@
-import { Loading } from '../shared/Loading';
-import { ScreenCard } from '../shared/ScreenCard';
+import { Loading } from '../../shared/ui/Loading';
+import { ScreenCard } from '../../shared/ui/ScreenCard';
 
 export function WaitingScreen() {
   return (

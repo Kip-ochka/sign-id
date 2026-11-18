@@ -40,7 +40,9 @@ function readDn(dn: string) {
       throw new Error('Некорректное имя сертификата');
     }
   });
-  if (offset !== dn.length) throw new Error('Некорректное имя сертификата');
+  if (offset !== dn.length) {
+    throw new Error('Некорректное имя сертификата');
+  }
   return attributes;
 }
 
@@ -56,7 +58,9 @@ function readFields<K extends string>(
       ...(attributes.get(alias) ?? []),
     ]);
     const value = values.values().next().value;
-    if (values.size === 1 && value?.trim()) fields[key] = value;
+    if (values.size === 1 && value?.trim()) {
+      fields[key] = value;
+    }
   });
   return fields;
 }
@@ -73,8 +77,12 @@ export function readCertificateNames(subjectName: string, issuerName: string) {
 type CertificateNames = ReturnType<typeof readCertificateNames>;
 
 function normalizeFilterValue(key: string, value: string) {
-  if (key === 'snils') return value.replace(/[\s\p{Pd}]/gu, '');
-  if (key === 'inn' || key === 'ogrn') return value.replace(/\s/g, '');
+  if (key === 'snils') {
+    return value.replace(/[\s\p{Pd}]/gu, '');
+  }
+  if (key === 'inn' || key === 'ogrn') {
+    return value.replace(/\s/g, '');
+  }
   return value.normalize().trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
@@ -83,7 +91,9 @@ function matchesFields(
   filter?: Partial<Record<string, string>>,
 ) {
   return Object.entries(filter ?? {}).every(([key, value]) => {
-    if (value === undefined) return true;
+    if (value === undefined) {
+      return true;
+    }
     const actual = fields[key];
     const expected = normalizeFilterValue(key, value);
     return (

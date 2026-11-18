@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import { readInquiryId } from './shared/readInquiryId';
 import './styles.css';
 
 const root = document.getElementById('root');
@@ -12,7 +11,7 @@ if (!root) {
 
 ReactDOM.render(
   <StrictMode>
-    <App inquiryId={readInquiryId(window.location.search)} />
+    <App />
   </StrictMode>,
   root,
 );

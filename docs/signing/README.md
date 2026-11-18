@@ -16,6 +16,8 @@
 
 Справочные спецификации: [API](API_CONTRACT.md), [КриптоПро](CRYPTO_CONTRACT.md), [простой интерфейс](UI_SPEC.md), [приёмка](ACCEPTANCE.md), [исходный файл](source/NEW_FEATURE.txt).
 
+Текущие слои FSD, карта модулей и подключение будущего UI: [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Последовательность задач
 
 | №   | Файл                                                        | Результат                                                           | Зависимость                                       |

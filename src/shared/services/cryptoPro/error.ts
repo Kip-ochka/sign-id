@@ -18,6 +18,7 @@ function readSourceCode(cause: unknown, message: string) {
 }
 
 export class CryptoProError extends Error {
+  readonly cause?: unknown;
   readonly sourceCode?: string;
   readonly code: string;
 
@@ -37,7 +38,8 @@ export class CryptoProError extends Error {
     ) {
       originalMessage = cause.message;
     }
-    super(originalMessage || code, { cause });
+    super(originalMessage || code);
+    this.cause = cause;
     this.name = 'CryptoProError';
     this.sourceCode = readSourceCode(cause, originalMessage);
     this.code = this.sourceCode ?? code;
@@ -52,7 +54,9 @@ export async function cryptoOperation<T>(
   try {
     return await operation();
   } catch (error) {
-    if (error instanceof CryptoProError) throw error;
+    if (error instanceof CryptoProError) {
+      throw error;
+    }
     throw new CryptoProError(stage, code, error);
   }
 }

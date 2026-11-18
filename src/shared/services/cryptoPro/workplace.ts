@@ -30,7 +30,10 @@ async function checkPlugin() {
 
   let initialized = false;
   try {
-    const { execute } = await import('crypto-pro-actual-cades-plugin');
+    const { execute } = await import(
+      /* webpackChunkName: "crypto-pro-actual-cades-plugin" */
+      'crypto-pro-actual-cades-plugin'
+    );
     await execute(async ({ cadesplugin }) => {
       initialized = true;
       await cadesplugin.CreateObjectAsync('CAdESCOM.About');
@@ -54,7 +57,10 @@ async function checkPlugin() {
 /** Читает версию CSP через cades API для применения политики Q-05. */
 export async function readCspVersion() {
   return cryptoOperation('csp', 'CSP_CHECK_FAILED', async () => {
-    const { execute } = await import('crypto-pro-actual-cades-plugin');
+    const { execute } = await import(
+      /* webpackChunkName: "crypto-pro-actual-cades-plugin" */
+      'crypto-pro-actual-cades-plugin'
+    );
     const parts: unknown[] = await execute(async ({ cadesplugin }) => {
       const about = await cadesplugin.CreateObjectAsync('CAdESCOM.About');
       const version = await about.CSPVersion();

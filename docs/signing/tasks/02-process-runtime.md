@@ -37,10 +37,10 @@ Typecheck и целевые Jest-тесты проходят. Решения п�
 
 ## Где находится реализация
 
-- [requests.ts](../../../src/process/requests.ts) — отдельные сетевые функции для start, ready, check, signing, poll и document, а также для настроек и экрана ошибки.
-- [useProcess.ts](../../../src/process/useProcess.ts) — обработчики сценария и состояние заявки. Каждый обработчик вызывает свой сетевой запрос и применяет ответ.
-- [polling.ts](../../../src/process/polling.ts) — пауза, запрос статуса и повтор при следующем task.
-- [useStatusActions.ts](../../../src/process/useStatusActions.ts) — общее действие кнопки и таймера SUCCESS.
+- [requests.ts](../../../src/entities/signing/requests.ts) — отдельные сетевые функции для start, ready, check, signing, poll и document, а также для настроек и экрана ошибки.
+- [useProcess.ts](../../../src/widgets/signing-process/useProcess.ts) — состояние заявки и композиция фичей; отдельные модули widget обрабатывают ответы, отмену и 401. Бизнес-действия разделены по срезам `src/process/`. См. [архитектуру FSD](../ARCHITECTURE.md).
+- [polling.ts](../../../src/process/polling/polling.ts) — пауза, запрос статуса и повтор при следующем task.
+- [useStatusActions.ts](../../../src/process/status/useStatusActions.ts) — общее действие кнопки и таймера SUCCESS.
 
 ## Интерфейс для следующих задач
 

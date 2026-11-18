@@ -1,78 +1,28 @@
-import type { SigningScreen as SigningResponse } from '../../shared/api';
+import { toCertificateList } from '../../entities/signing';
 import {
-  CertificatePicker,
-  useSelectedCertificate,
-} from '../shared/CertificatePicker';
-import type { SignatureControls } from '../shared/CertificatePicker';
-import { Loading } from '../shared/Loading';
-import { ScreenCard } from '../shared/ScreenCard';
-import { WorkActions } from '../shared/WorkActions';
-import { DocumentList } from './DocumentList';
-import { PreviewDialog } from './PreviewDialog';
-import type { DocumentPreview } from './PreviewDialog';
+  useSigningProcess,
+  useSigningNavigation,
+} from '../../widgets/signing-process';
+import { SigningDocuments } from '../../widgets/signing-documents';
 
-export type SigningPhase = 'signing' | 'sending';
-
-export function SigningScreen({
-  response,
-  certificates,
-  busy,
-  phase,
-  onSign,
-  onOpenDocument,
-  pendingDocumentId,
-  preview,
-  closePreview,
-}: SignatureControls & {
-  response: SigningResponse;
-  phase?: SigningPhase;
-  onOpenDocument?: (id: string) => void;
-  pendingDocumentId?: string;
-  preview?: DocumentPreview;
-  closePreview?: () => void;
-}) {
-  const { selected, selectCertificate } = useSelectedCertificate(certificates);
-  const {
-    title,
-    message,
-    buttons,
-    step,
-    lists: { documents },
-  } = response.screen;
-  const blocked =
-    busy ||
-    pendingDocumentId !== undefined ||
-    certificates.status === 'loading';
-  let sign: (() => void) | undefined;
-  if (selected && onSign && documents.length > 0) {
-    sign = () => onSign(selected);
+export function SigningScreen() {
+  const { current } = useSigningNavigation();
+  const { state, commands } = useSigningProcess();
+  if (current.process !== 'SIGNING') {
+    return null;
   }
-
+  const certificates = toCertificateList(state.signatureCertificates);
   return (
-    <ScreenCard title={title} message={message} step={step}>
-      <DocumentList
-        documents={documents}
-        blocked={blocked}
-        pendingDocumentId={pendingDocumentId}
-        onOpenDocument={onOpenDocument}
-      />
-      <CertificatePicker
-        certificates={certificates}
-        selected={selected}
-        onSelect={selectCertificate}
-        busy={blocked}
-      />
-      {phase && (
-        <Loading>
-          {phase === 'sending'
-            ? 'Отправляем подписанные документы'
-            : 'Выполняем подписание'}
-        </Loading>
-      )}
-      <WorkActions buttons={buttons} busy={blocked} onAction={sign} />
-      {preview && closePreview && (
-        <PreviewDialog key={preview.url} file={preview} close={closePreview} />
-      )}
-    </ScreenCard>
+    <SigningDocuments
+      key={certificates.status}
+      response={current}
+      busy={state.busy}
+      phase={state.signaturePhase}
+      certificates={certificates}
+      onSign={({ id }) => {
+        commands.submitSigning(id);
+      }}
+      downloadDocument={commands.downloadDocument}
+    />
   );
 }

@@ -4,6 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import fsd from './eslint/fsd.mjs';
 
 export default defineConfig(
   globalIgnores(['dist/', '.idea/']),
@@ -18,8 +19,18 @@ export default defineConfig(
     files: ['*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+  prettier,
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.ts', 'src/**/__tests__/**'],
+    plugins: { fsd },
+    rules: { 'fsd/import-boundaries': 'error' },
+  },
   {
     rules: {
+      'consistent-return': 'error',
+      curly: ['error', 'all'],
+      'no-void': 'error',
       'no-nested-ternary': 'error',
       'no-restricted-syntax': [
         'error',
@@ -55,5 +66,4 @@ export default defineConfig(
       ],
     },
   },
-  prettier,
 );

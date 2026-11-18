@@ -179,8 +179,11 @@ test.each([settingProcess, signingProcess])(
     } finally {
       routes.forEach((route, index) => {
         const original = originalResponses[index];
-        if (original) jsonResponses.set(route, original);
-        else jsonResponses.delete(route);
+        if (original) {
+          jsonResponses.set(route, original);
+        } else {
+          jsonResponses.delete(route);
+        }
       });
     }
   },
@@ -385,7 +388,9 @@ test.each([
           name,
           type: 'application/pkcs7-signature',
         });
-        if (typeof part === 'string') throw new Error('Ожидался файл подписи');
+        if (typeof part === 'string') {
+          throw new Error('Ожидался файл подписи');
+        }
         expect([...new Uint8Array(await part.arrayBuffer())]).toEqual(bytes);
       }),
     );
@@ -398,8 +403,9 @@ test.each([
           name: `${serial_number}.b64`,
           type: 'text/plain',
         });
-        if (typeof part === 'string')
+        if (typeof part === 'string') {
           throw new Error('Ожидался файл сертификата');
+        }
         expect(await part.text()).toBe(certificate_base64);
       }),
     );

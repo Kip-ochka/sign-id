@@ -35,7 +35,9 @@ function readBase64(value: unknown, stage: 'certificate' | 'signing') {
     base64Schema.safeParse(base64).success
   ) {
     try {
-      if (btoa(atob(base64)) === base64) return base64;
+      if (btoa(atob(base64)) === base64) {
+        return base64;
+      }
     } catch (cause) {
       throw new CryptoProError(stage, 'BASE64_ERROR', cause);
     }
@@ -44,8 +46,10 @@ function readBase64(value: unknown, stage: 'certificate' | 'signing') {
 }
 
 async function getValidCertificates() {
-  const { getUserCertificates } =
-    await import('crypto-pro-actual-cades-plugin');
+  const { getUserCertificates } = await import(
+    /* webpackChunkName: "crypto-pro-actual-cades-plugin" */
+    'crypto-pro-actual-cades-plugin'
+  );
   let certificates: PluginCertificate[];
   try {
     certificates = await getUserCertificates(true);
@@ -60,7 +64,9 @@ async function getValidCertificates() {
   }
   const now = Date.now();
   return certificates.filter((certificate) => {
-    if (!certificate.validFrom || !certificate.validTo) return false;
+    if (!certificate.validFrom || !certificate.validTo) {
+      return false;
+    }
     const validFrom = new Date(certificate.validFrom).getTime();
     const validTo = new Date(certificate.validTo).getTime();
     return validFrom <= now && now <= validTo;
@@ -103,7 +109,9 @@ export async function findCertificates(filters?: CertificateFilters) {
           certificate.subjectName,
           certificate.issuerName,
         );
-        if (!matchesCertificate(names, filters)) return;
+        if (!matchesCertificate(names, filters)) {
+          return;
+        }
         const thumbprint = certificate.thumbprint.toUpperCase();
         if (!certificates.has(thumbprint)) {
           certificates.set(
@@ -112,8 +120,9 @@ export async function findCertificates(filters?: CertificateFilters) {
           );
         }
       }, Promise.resolve());
-      if (!certificates.size)
+      if (!certificates.size) {
         throw new CryptoProError('certificate', 'NO_CERT');
+      }
       return [...certificates.values()];
     },
   );
@@ -136,8 +145,9 @@ function selectHash(oid: string, hashes: SigningHashes) {
     bits === 256
       ? hash256Schema.safeParse(hashes.hash256)
       : hash512Schema.safeParse(hashes.hash512);
-  if (!hash.success)
+  if (!hash.success) {
     throw new CryptoProError('signing', 'INVALID_SIGNING_HASH');
+  }
   return { bits, hex: hash.data };
 }
 
@@ -184,7 +194,9 @@ export async function signHashes(
           candidate.thumbprint.toUpperCase() === thumbprint.toUpperCase()
         );
       });
-      if (!certificate) throw new CryptoProError('certificate', 'NO_CERT');
+      if (!certificate) {
+        throw new CryptoProError('certificate', 'NO_CERT');
+      }
       return {
         certificate,
         names: readCertificateNames(
@@ -238,7 +250,10 @@ async function signSelectedHash(
   signal?: AbortSignal,
 ) {
   return cryptoOperation('signing', 'SIGN_HASH_FAILED', async () => {
-    const { execute } = await import('crypto-pro-actual-cades-plugin');
+    const { execute } = await import(
+      /* webpackChunkName: "crypto-pro-actual-cades-plugin" */
+      'crypto-pro-actual-cades-plugin'
+    );
     const base64: unknown = await execute(async ({ cadesplugin }) => {
       const data = await cadesplugin.CreateObjectAsync('CAdESCOM.HashedData');
       await data.propset_Algorithm(

@@ -8,10 +8,7 @@ import {
 } from '@jest/globals';
 import { execute, getUserCertificates } from 'crypto-pro-actual-cades-plugin';
 
-import {
-  getCryptoErrorCode,
-  getCryptoErrorKey,
-} from '../../../process/network';
+import { getCryptoErrorCode, getCryptoErrorKey } from '../../lib/cryptoErrors';
 import { findCertificates, signHash, signHashes } from './adapter';
 import { checkBrowserPlugin, readCspVersion } from './workplace';
 
@@ -560,8 +557,12 @@ describe('последовательная подпись документов',
       const { signed } = mockSigning();
       const controller = new AbortController();
       signed.SignHash.mockReturnValueOnce('YQ==').mockImplementationOnce(() => {
-        if (failure === 'токен извлечён') throw new Error('Token removed');
-        if (failure === 'операция отменена') controller.abort();
+        if (failure === 'токен извлечён') {
+          throw new Error('Token removed');
+        }
+        if (failure === 'операция отменена') {
+          controller.abort();
+        }
         return failure === 'невалидная подпись' ? 'broken!' : 'YQ==';
       });
       let expectedError: { name?: string; code?: string } = {

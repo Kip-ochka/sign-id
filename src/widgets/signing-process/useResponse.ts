@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { saveResponse, showFallback, showScreen } from '../../entities/signing';
+import { saveResponse, showScreen } from '../../entities/signing';
 import { sessionStorage } from '../../entities/signing';
 import { requestReady } from '../../entities/signing';
 import type { ProcessReply, RequestOptions } from '../../entities/signing';
@@ -24,12 +24,11 @@ export function useResponse(
       const { signal } = options;
       setState((previous) => showScreen(previous, screen));
       try {
-        if (screen.process === 'SIGNING') {
-          await checkBrowserPlugin();
-          signal.throwIfAborted();
-          await checkCsp();
-          signal.throwIfAborted();
-        }
+        signal.throwIfAborted();
+        await checkBrowserPlugin();
+        signal.throwIfAborted();
+        await checkCsp();
+        signal.throwIfAborted();
         const signatureCertificates = await findCertificates(
           screen.cryptopro.filters,
         );
@@ -53,7 +52,6 @@ export function useResponse(
     async function applyReply(
       reply: ProcessReply,
       options: RequestOptions,
-      readySent = false,
     ): Promise<void> {
       const { signal } = options;
       if (signal.aborted) {
@@ -61,24 +59,17 @@ export function useResponse(
       }
       const { data, requestId } = reply;
       if (data.kind === 'task') {
-        const next = await pollUntilProcess(data.response, options, (task) => {
-          setState((previous) => {
-            const next = saveResponse(previous, task);
-            if (previous.screen.process === 'WAITING') {
-              return next;
-            }
-            return showScreen(next, { process: 'WAITING' });
-          });
-        });
-        return applyReply(next, options, readySent);
-      }
-      if (data.kind === 'unsupported-mode') {
-        setState((previous) =>
-          showScreen(previous, { ...data.fallback }, requestId),
+        const next = await pollUntilProcess(
+          data.response,
+          options,
+          (task) => setState((previous) => saveResponse(previous, task)),
+          () =>
+            setState((previous) =>
+              showScreen(previous, { process: 'WAITING' }),
+            ),
         );
-        return undefined;
+        return applyReply(next, options);
       }
-
       const screen = data.response;
       if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
         setState((previous) => saveResponse(previous, screen));
@@ -89,10 +80,6 @@ export function useResponse(
         // ready по кэшу использует новую сессию в той же операции.
         sessionStorage.save(screen.session);
         options.session = screen.session;
-        if (readySent) {
-          setState((previous) => showFallback(saveResponse(previous, screen)));
-          return undefined;
-        }
         // Сохраняем session, оставляя текущий экран до решения по кэшу.
         setState((previous) => ({
           ...saveResponse(previous, screen),
@@ -108,7 +95,7 @@ export function useResponse(
         signal.throwIfAborted();
         if (cached) {
           const next = await requestReady(options);
-          return applyReply(next, options, true);
+          return applyReply(next, options);
         }
       }
 

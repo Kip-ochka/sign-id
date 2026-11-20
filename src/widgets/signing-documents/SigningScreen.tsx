@@ -12,8 +12,6 @@ import Typography from '@sber-site/malachite-kit/esm/components/Typography';
 import * as css from './SigningScreen.css';
 import { WorkActions } from '../../entities/signing';
 import { DocumentList } from './DocumentList';
-import { PreviewDialog } from './PreviewDialog';
-import type { DocumentPreview } from './PreviewDialog';
 
 export type SigningPhase = 'signing' | 'sending';
 
@@ -25,15 +23,11 @@ export function SigningScreen({
   onSign,
   onOpenDocument,
   pendingDocumentId,
-  preview,
-  closePreview,
 }: SignatureControls & {
   response: SigningResponse;
   phase?: SigningPhase;
   onOpenDocument?: (id: string) => void;
   pendingDocumentId?: string;
-  preview?: DocumentPreview;
-  closePreview?: () => void;
 }) {
   useStyles(css);
   const { isDesktop } = useBreakpoints();
@@ -89,16 +83,9 @@ export function SigningScreen({
           className="sign_signing__button-secondary"
           buttons={buttons}
           busy={blocked}
-          isLoading={busy || phase !== undefined}
+          loading={busy || phase !== undefined}
           onAction={sign}
         />
-        {preview && closePreview && (
-          <PreviewDialog
-            key={preview.url}
-            file={preview}
-            close={closePreview}
-          />
-        )}
       </div>
     </ContentWrapper>
   );

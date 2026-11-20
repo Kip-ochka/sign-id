@@ -6,20 +6,16 @@ import {
 } from '../../shared/api/helpers/files';
 import { requestCertificateSchema } from '../../shared/api/schemas/requests.schema';
 import { signHash } from '../../shared/services/cryptoPro/adapter';
+import type { SigningCertificate } from '../../shared/services/cryptoPro/adapter';
 
 export async function prepareCheck(
-  { screen: { test_document }, cryptopro }: CheckScreen,
-  thumbprint: string,
+  { screen: { test_document } }: CheckScreen,
+  selectedCertificate: SigningCertificate,
   signal: AbortSignal,
 ): Promise<Extract<SignedEvent, { event: 'check' }>> {
   const { signatureBase64, certificate } = await signHash(
-    {
-      thumbprint,
-      mode: cryptopro,
-      filters: cryptopro.filters,
-      hashes: test_document,
-      parameters: { profile: 'PKCS7' },
-    },
+    selectedCertificate,
+    test_document,
     signal,
   );
   return {

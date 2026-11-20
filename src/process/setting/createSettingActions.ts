@@ -70,7 +70,7 @@ export function createSettingActions({
         workplaceCertificates: result.certificates,
       }));
       const reply = await requestReady(options);
-      await applyResponse(reply, options, true);
+      await applyResponse(reply, options);
     });
   };
 

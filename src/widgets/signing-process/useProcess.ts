@@ -30,7 +30,7 @@ export function useProcess(
 ) {
   const [state, setState] = useState<ProcessState>(() => ({
     ...initialState(inquiryId),
-    session: inquiryId ? sessionStorage.read() : undefined,
+    session: sessionStorage.read(),
   }));
   useSessionExpiry(state, setState);
   const { showError, showSetupError } = useProcessErrors(setState);
@@ -49,12 +49,7 @@ export function useProcess(
     },
     [applyResponse],
   );
-  const { run, stop, allowManualRestart } = useOperation(
-    state,
-    setState,
-    handleStart,
-    showError,
-  );
+  const { run, stop } = useOperation(state, setState, handleStart, showError);
   const setting = createSettingActions({
     state,
     setState,
@@ -86,30 +81,21 @@ export function useProcess(
 
   const { backScreen } = state;
   // BACK восстанавливает сохранённый рабочий экран без повторной отправки.
-  const back = useCallback(
-    (manual = true) => {
-      if (manual) {
-        allowManualRestart();
-      }
-      if (!backScreen) {
-        return restart();
-      }
-      stop();
-      if (backScreen.process === 'CHECK' || backScreen.process === 'SIGNING') {
-        return run((options) => openSignatureScreen(backScreen, options));
-      }
-      setState((previous) =>
-        showScreen({ ...previous, busy: false }, backScreen),
-      );
-      return undefined;
-    },
-    [backScreen, openSignatureScreen, restart, run, stop, allowManualRestart],
-  );
+  const back = useCallback(() => {
+    if (!backScreen) {
+      return restart();
+    }
+    stop();
+    if (backScreen.process === 'CHECK' || backScreen.process === 'SIGNING') {
+      return run((options) => openSignatureScreen(backScreen, options));
+    }
+    setState((previous) =>
+      showScreen({ ...previous, busy: false }, backScreen),
+    );
+    return undefined;
+  }, [backScreen, openSignatureScreen, restart, run, stop]);
 
   const recoverFromRenderError = () => {
-    if (!inquiryId) {
-      return;
-    }
     stop();
     setState((previous) => showFallback({ ...previous, busy: false }));
   };

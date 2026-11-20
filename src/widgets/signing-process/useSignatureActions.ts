@@ -25,20 +25,21 @@ export function useSignatureActions(
   );
   const submitSelectedCertificate = (thumbprint: string) => {
     const { screen, signatureCertificates } = state;
+    const selectedCertificate = signatureCertificates?.find(
+      (certificate) => certificate.thumbprint === thumbprint,
+    );
     if (
-      (screen.process !== 'CHECK' && screen.process !== 'SIGNING') ||
-      !signatureCertificates?.some(
-        (certificate) => certificate.thumbprint === thumbprint,
-      )
+      !selectedCertificate ||
+      (screen.process !== 'CHECK' && screen.process !== 'SIGNING')
     ) {
       return undefined;
     }
     return submitSignature((signal) => {
       setState((previous) => ({ ...previous, signaturePhase: 'signing' }));
       if (screen.process === 'CHECK') {
-        return prepareCheck(screen, thumbprint, signal);
+        return prepareCheck(screen, selectedCertificate, signal);
       }
-      return prepareSigning(screen, thumbprint, signal);
+      return prepareSigning(screen, selectedCertificate, signal);
     });
   };
 

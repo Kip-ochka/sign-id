@@ -15,8 +15,6 @@ export function DocumentList({
   useStyles(css);
   return (
     <div className="sign_signing__document-wrapper" aria-label="Документы">
-      {documents.length === 0 && <p>Нет документов для подписания.</p>}
-
       {documents.map(({ id, title, format }) => {
         const normalized = format.toUpperCase().replace(/^\./, '');
         let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';

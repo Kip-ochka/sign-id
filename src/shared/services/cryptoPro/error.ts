@@ -2,19 +2,34 @@ import { errorsBase } from '../../errorsBase';
 
 type CryptoStage = 'extension' | 'plugin' | 'csp' | 'certificate' | 'signing';
 
-function readSourceCode(cause: unknown, message: string) {
-  if (typeof cause === 'object' && cause !== null) {
-    if ('code' in cause && typeof cause.code === 'string' && cause.code) {
-      return cause.code;
-    }
-    if ('number' in cause && typeof cause.number === 'number' && cause.number) {
-      return '0x' + (cause.number >>> 0).toString(16).padStart(8, '0');
-    }
+const hresultPattern = /\b0x[0-9a-f]{8}\b/i;
+
+function readHresult(value: unknown) {
+  if (typeof value === 'string') {
+    return value.match(hresultPattern)?.[0];
   }
-  return (
-    message.match(/\b0x[0-9a-f]{8}\b/i)?.[0] ??
-    (Object.hasOwn(errorsBase, message) ? message : undefined)
-  );
+  if (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    ((value >= -0x80000000 && value < 0) ||
+      (value >= 0x80000000 && value <= 0xffffffff))
+  ) {
+    return '0x' + (value >>> 0).toString(16).padStart(8, '0');
+  }
+  return undefined;
+}
+
+function readPluginMessage(
+  cause: unknown,
+  getLastError: (cause: unknown) => unknown,
+) {
+  try {
+    const result = getLastError(cause);
+    return typeof result === 'string' ? result : '';
+  } catch {
+    // Диагностика плагина может сама завершиться ошибкой.
+    return '';
+  }
 }
 
 export class CryptoProError extends Error {
@@ -26,6 +41,7 @@ export class CryptoProError extends Error {
     readonly stage: CryptoStage,
     code: string,
     cause?: unknown,
+    getLastError?: (cause: unknown) => unknown,
   ) {
     let originalMessage = '';
     if (typeof cause === 'string') {
@@ -38,11 +54,36 @@ export class CryptoProError extends Error {
     ) {
       originalMessage = cause.message;
     }
-    super(originalMessage || code);
+    const pluginMessage = getLastError
+      ? readPluginMessage(cause, getLastError)
+      : '';
+    super(originalMessage || pluginMessage || code);
     this.cause = cause;
     this.name = 'CryptoProError';
-    this.sourceCode = readSourceCode(cause, originalMessage);
-    this.code = this.sourceCode ?? code;
+    const errorFields = cause as
+      { code?: unknown; number?: unknown } | undefined;
+    const originalCode = errorFields?.code;
+    const hresult =
+      readHresult(originalCode) ??
+      readHresult(errorFields?.number) ??
+      readHresult(cause) ??
+      readHresult(originalMessage) ??
+      readHresult(pluginMessage);
+    const symbolicCode =
+      typeof originalCode === 'string' && originalCode
+        ? originalCode
+        : undefined;
+    this.sourceCode =
+      hresult ??
+      (getLastError ? undefined : symbolicCode) ??
+      (Object.hasOwn(errorsBase, originalMessage)
+        ? originalMessage
+        : undefined);
+    this.code =
+      this.sourceCode ??
+      ((getLastError && (originalMessage || pluginMessage)) ||
+        symbolicCode ||
+        code);
   }
 }
 
@@ -50,6 +91,7 @@ export async function cryptoOperation<T>(
   stage: CryptoStage,
   code: string,
   operation: () => Promise<T>,
+  getLastError?: (cause: unknown) => unknown,
 ): Promise<T> {
   try {
     return await operation();
@@ -57,6 +99,6 @@ export async function cryptoOperation<T>(
     if (error instanceof CryptoProError) {
       throw error;
     }
-    throw new CryptoProError(stage, code, error);
+    throw new CryptoProError(stage, code, error, getLastError);
   }
 }

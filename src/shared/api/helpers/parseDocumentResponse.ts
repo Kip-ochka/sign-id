@@ -1,4 +1,4 @@
-import { documentResponseSchema } from '../schemas';
+import { documentDataSchema } from '../schemas';
 import type { DocumentData } from '../types';
 
 export const parseDocumentResponse = async (
@@ -36,11 +36,15 @@ export const parseDocumentResponse = async (
   const base64 =
     typeof filePart === 'string' ? filePart : await filePart.text();
   const metadata: unknown = JSON.parse(jsonText);
-  const parsed = documentResponseSchema.safeParse(metadata);
+  const parsed = documentDataSchema.safeParse(
+    typeof metadata === 'object' && metadata !== null
+      ? { ...metadata, base64 }
+      : undefined,
+  );
 
   if (!parsed.success) {
-    throw new Error('Некорректные данные документа в части response');
+    throw new Error('Некорректные данные документа');
   }
 
-  return { ...parsed.data, base64 };
+  return parsed.data;
 };

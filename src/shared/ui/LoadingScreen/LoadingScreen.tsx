@@ -1,8 +1,8 @@
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
-import { ContentWrapper } from '../../shared/ui/ContentWrapper';
-import { Loading } from '../../shared/ui/Loading';
-import * as css from './StartScreen.css';
-export function StartScreen() {
+import { ContentWrapper } from '../ContentWrapper';
+import { Loading } from '../Loading';
+import * as css from './LoadingScreen.css';
+export function LoadingScreen() {
   useStyles(css);
   return (
     <ContentWrapper>

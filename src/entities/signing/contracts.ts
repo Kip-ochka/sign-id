@@ -9,7 +9,6 @@ export type RunOperation = <T>(
 export type ApplyResponse = (
   reply: ProcessReply,
   options: RequestOptions,
-  readySent?: boolean,
 ) => Promise<void>;
 export type ShowError = (
   key: string | undefined,

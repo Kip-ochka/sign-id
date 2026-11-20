@@ -1,1 +1,1 @@
-export * from './WaitingScreen';
+export { LoadingScreen as WaitingScreen } from '../../shared/ui/LoadingScreen';

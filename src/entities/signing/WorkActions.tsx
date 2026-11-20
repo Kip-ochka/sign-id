@@ -5,13 +5,13 @@ import { httpUrl } from '../../shared/lib/httpUrl';
 export function WorkActions({
   buttons,
   busy,
-  isLoading = false,
+  loading = false,
   onAction,
   className,
 }: {
   buttons: ScreenButtons;
   busy: boolean;
-  isLoading?: boolean;
+  loading?: boolean;
   onAction?: () => void;
   className?: string;
 }) {
@@ -28,7 +28,7 @@ export function WorkActions({
         size="large"
         className={className}
         disabled={busy || !onAction}
-        isLoading={isLoading}
+        loading={loading}
         onClick={onAction}
       >
         {buttons.accent.message}

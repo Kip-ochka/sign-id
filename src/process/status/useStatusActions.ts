@@ -33,13 +33,13 @@ export function canActivate(button: ScreenButtonAction) {
 // Кнопки STATUS и таймер SUCCESS используют одно действие.
 export function useStatusActions(
   screen: DisplayScreen,
-  back: (manual: boolean) => void | Promise<void>,
+  back: () => void | Promise<void>,
 ) {
   const actionTaken = useRef(false);
   const cancelTimer = useRef<() => void>();
 
   const activate = useCallback(
-    (slot: StatusButton, manual = true) => {
+    (slot: StatusButton) => {
       if (screen.process !== 'STATUS' || actionTaken.current) {
         return undefined;
       }
@@ -51,7 +51,7 @@ export function useStatusActions(
       actionTaken.current = true;
       cancelTimer.current?.();
       if (action.type === 'back') {
-        return back(manual);
+        return back();
       }
       // Q-11: полный URL открывает внешний процесс. Внутренние экраны меняет Context.
       window.location.assign(action.url);
@@ -75,7 +75,7 @@ export function useStatusActions(
       return undefined;
     }
 
-    const cancel = schedule(() => activate('accent', false), screen.timer);
+    const cancel = schedule(() => activate('accent'), screen.timer);
     cancelTimer.current = cancel;
     return cancel;
   }, [activate, screen]);

@@ -1,17 +1,8 @@
 import Select from '@sber-site/malachite-kit/esm/components/Select';
-import Text from '@sber-site/sbercraft-nova-kit/components/Text';
 import { useRef, useState } from 'react';
-export type CertificateOption = {
-  id: string;
-  title: string;
-  organization: string;
-  serial: string;
-  expires?: string;
-};
-export type CertificateList =
-  | { status: 'unavailable' }
-  | { status: 'loading' }
-  | { status: 'loaded'; options: readonly CertificateOption[] };
+import { toCertificateSelectData } from './certificateList';
+import type { CertificateList, CertificateOption } from './certificateList';
+
 export function CertificatePicker({
   certificates,
   selected,
@@ -26,14 +17,8 @@ export function CertificatePicker({
   className?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-  if (certificates.status === 'unavailable') {
-    return <Text>Подключение сертификатов пока недоступно.</Text>;
-  }
-  if (certificates.status === 'loading') {
-    return <Text role="status">Ищем сертификаты</Text>;
-  }
-  if (certificates.options.length === 0) {
-    return <Text role="alert">Подходящие сертификаты не найдены.</Text>;
+  if (certificates.status === 'loading' || certificates.options.length < 2) {
+    return null;
   }
   return (
     <Select
@@ -50,11 +35,7 @@ export function CertificatePicker({
         onSelect(event.target.value)
       }
       placeholder="Выберите сертификат"
-      data={certificates.options.map(({ id, title, organization, serial }) => ({
-        id,
-        value: id,
-        text: [title, organization, serial].filter(Boolean).join(' · '),
-      }))}
+      data={toCertificateSelectData(certificates.options)}
     />
   );
 }

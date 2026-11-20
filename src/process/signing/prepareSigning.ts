@@ -3,20 +3,16 @@ import type { SigningScreen } from '../../shared/api';
 import { createCertificateFiles } from '../../shared/api/helpers/files';
 import { requestCertificateSchema } from '../../shared/api/schemas/requests.schema';
 import { signHashes } from '../../shared/services/cryptoPro/adapter';
+import type { SigningCertificate } from '../../shared/services/cryptoPro/adapter';
 
 export async function prepareSigning(
-  { screen: { lists }, cryptopro }: SigningScreen,
-  thumbprint: string,
+  { screen: { lists } }: SigningScreen,
+  selectedCertificate: SigningCertificate,
   signal: AbortSignal,
 ): Promise<Extract<SignedEvent, { event: 'signing' }>> {
   const documents = lists.documents.map((document) => ({ ...document }));
   const { signatures, certificate } = await signHashes(
-    {
-      thumbprint,
-      mode: cryptopro,
-      filters: cryptopro.filters,
-      parameters: { profile: 'PKCS7' },
-    },
+    selectedCertificate,
     documents,
     signal,
   );

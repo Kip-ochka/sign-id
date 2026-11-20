@@ -1,1 +1,1 @@
-export * from './StartScreen';
+export { LoadingScreen as StartScreen } from '../../shared/ui/LoadingScreen';

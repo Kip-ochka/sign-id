@@ -32,15 +32,6 @@ export const createCheckSignature = (base64: Base64): SignatureFile => ({
   base64,
 });
 
-// Для signing имя подписи — document.id.
-export const createSigningSignatures = (
-  byDocumentId: Record<string, Base64>,
-): SignatureFile[] =>
-  Object.entries(byDocumentId).map(([documentId, base64]) => ({
-    fileName: documentId,
-    base64,
-  }));
-
 // В файл уходит только содержимое сертификата, остальные поля — в JSON-парт request.
 export const createCertificateFiles = (
   certificates: Certificate[],

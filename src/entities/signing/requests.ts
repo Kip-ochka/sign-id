@@ -61,15 +61,10 @@ function requestBody(inquiryId: string): StartStateRequest {
 async function sendRequest<T>(
   send: () => Promise<T>,
   { settings, signal, onUnauthorized }: RequestOptions,
-  { document = false, retryTimeout = true } = {},
+  { document = false } = {},
 ) {
   try {
-    const response = await requestWithRetry(
-      send,
-      settings,
-      signal,
-      retryTimeout,
-    );
+    const response = await requestWithRetry(send, settings, signal);
     signal.throwIfAborted();
     return response;
   } catch (error) {
@@ -112,9 +107,8 @@ function readProcessResponse(
 async function sendState(
   send: () => Promise<AxiosResponse<unknown>>,
   options: RequestOptions,
-  retryTimeout = true,
 ) {
-  const response = await sendRequest(send, options, { retryTimeout });
+  const response = await sendRequest(send, options);
   return readProcessResponse(response, true);
 }
 
@@ -136,7 +130,11 @@ async function requestDictionary(
 
 export async function loadSettings(options: RequestOptions) {
   try {
-    const response = await requestDictionary('settings', options);
+    const response = await getSettings(
+      'settings',
+      options.signal,
+      options.session,
+    );
     const parsed = settingsResponseSchema.safeParse(response.data);
     if (response.status === 200 && parsed.success) {
       return parsed.data;
@@ -198,7 +196,7 @@ export async function requestPoll(task: string, options: RequestOptions) {
   return readProcessResponse(response, false);
 }
 
-// Повторы отправляют те же файлы с тем же req_time. Локальный timeout завершает операцию.
+// Повторы отправляют те же файлы с тем же req_time.
 export function requestCheck(
   { payload, files }: Extract<SignedEvent, { event: 'check' }>,
   options: RequestOptions,
@@ -207,7 +205,6 @@ export function requestCheck(
   return sendState(
     () => state('check', body, files, options.signal, options.session),
     options,
-    false,
   );
 }
 
@@ -227,7 +224,6 @@ export function requestSigning(
         options.token,
       ),
     options,
-    false,
   );
 }
 

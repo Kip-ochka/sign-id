@@ -8,7 +8,6 @@ export async function requestWithRetry<T>(
   request: () => Promise<T>,
   settings: SettingsResponse,
   signal: AbortSignal,
-  retryTimeout: boolean,
 ) {
   const limit = getHttpAttemptLimit(settings);
   async function attemptRequest(attempt: number): Promise<T> {
@@ -21,8 +20,7 @@ export async function requestWithRetry<T>(
         isAxiosError(error) &&
         (error.response?.status === 429 ||
           error.response?.status === 504 ||
-          (retryTimeout &&
-            !error.response &&
+          (!error.response &&
             (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')));
       if (!retryable || attempt >= limit) {
         throw error;

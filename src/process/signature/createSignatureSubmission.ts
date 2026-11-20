@@ -16,6 +16,7 @@ import {
   getCryptoErrorCode,
   getCryptoErrorKey,
 } from '../../shared/lib/cryptoErrors';
+import { CryptoProError } from '../../shared/services/cryptoPro/error';
 
 export function createSignatureSubmission(
   state: ProcessState,
@@ -56,7 +57,12 @@ export function createSignatureSubmission(
       } catch (error) {
         if (!signal.aborted) {
           await showError(
-            getCryptoErrorKey(getCryptoErrorCode(error), 'signing'),
+            getCryptoErrorKey(
+              getCryptoErrorCode(error),
+              error instanceof CryptoProError && error.stage === 'signing'
+                ? 'signing'
+                : 'setup',
+            ),
             options,
           );
         }

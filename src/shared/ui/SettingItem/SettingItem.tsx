@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
 import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
 import waitIcon from '../../assets/WAIT_STATUS.svg';
@@ -8,7 +7,6 @@ import * as css from './SettingItem.css';
 type Props = {
   status: 'WAIT' | 'RUNNING' | 'SUCCESS' | 'ERROR';
   message: string;
-  description?: string;
   textButton?: string;
   onDetails?: () => void;
   disabled?: boolean;
@@ -28,14 +26,12 @@ const labels = {
 export function SettingItem({
   status,
   message,
-  description,
   textButton = 'Подробнее',
   onDetails,
   disabled,
 }: Props) {
   useStyles(css);
   const { isDesktop } = useBreakpoints();
-  const [expanded, setExpanded] = useState(false);
   return (
     <div className="sign_setting-item">
       <div
@@ -58,29 +54,17 @@ export function SettingItem({
         >
           {message}
         </Text>
-        {status === 'ERROR' && (onDetails || description) && (
+        {status === 'ERROR' && onDetails && (
           <button
             type="button"
+            onClick={onDetails}
             disabled={disabled}
             className="sign_settings-item__error-button"
-            aria-expanded={onDetails ? undefined : expanded}
-            onClick={() => {
-              if (onDetails) {
-                onDetails();
-              } else {
-                setExpanded((value) => !value);
-              }
-            }}
           >
             {textButton}
           </button>
         )}
       </div>
-      {expanded && (
-        <Text tag="p" size="sm" className="sign_setting-item__error-text">
-          {description}
-        </Text>
-      )}
     </div>
   );
 }

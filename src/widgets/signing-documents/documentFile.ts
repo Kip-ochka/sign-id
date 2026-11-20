@@ -47,18 +47,46 @@ export function createDocumentFile({
   const type = mimeByExtension.get(extension) ?? binaryMime;
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   const file = new File([bytes], filename + suffix, { type });
-  let kind: 'image' | 'pdf' | undefined;
+  let kind: 'image' | 'pdf' | 'text' | undefined;
   if (rasterHeaders[type]?.(binary)) {
     kind = 'image';
   } else if (type === 'application/pdf' && binary.startsWith('%PDF-')) {
     kind = 'pdf';
+  } else if (extension === 'txt' && type === 'text/plain') {
+    kind = 'text';
   }
   return { file, kind } as const;
 }
 
-export function documentUrl(file: File, kind?: 'image' | 'pdf') {
-  // A download link can also be navigated to. Serve unpreviewed bytes as binary.
-  return URL.createObjectURL(
-    kind ? file : file.slice(0, file.size, binaryMime),
+export function openDocumentFile(
+  result: Parameters<typeof createDocumentFile>[0],
+) {
+  const { file, kind } = createDocumentFile(result);
+  const openInTab =
+    kind === 'image' ||
+    kind === 'text' ||
+    (kind === 'pdf' && navigator.pdfViewerEnabled !== false);
+  // Ссылку скачивания тоже можно открыть, поэтому отдаём её как бинарный файл.
+  const url = URL.createObjectURL(
+    openInTab ? file : file.slice(0, file.size, binaryMime),
   );
+  const link = document.createElement('a');
+  try {
+    link.href = url;
+    if (openInTab) {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    } else {
+      link.download = file.name;
+    }
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    return url;
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  } finally {
+    link.remove();
+  }
 }

@@ -55,7 +55,7 @@ export function TestSignature({
           className="sign_check__button-secondary"
           buttons={buttons}
           busy={blocked}
-          isLoading={busy || phase !== undefined}
+          loading={busy || phase !== undefined}
           onAction={sign}
         />
         <ConsentText consent={consent} />

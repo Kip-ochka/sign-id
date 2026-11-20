@@ -27,7 +27,11 @@ export const documentResponseSchema = z.object({
 // Результат parseDocumentResponse, а не тело HTTP-ответа (тело — multipart/mixed):
 // метаданные из части response плюс base64 содержимого из части file.
 export const documentDataSchema = documentResponseSchema.extend({
-  base64: base64Schema,
+  base64: base64Schema.min(1).refine((value) => {
+    // atob принимает последний блок из двух или трёх символов без дополнения.
+    const remainder = value.length % 4;
+    return value.endsWith('=') ? remainder === 0 : remainder !== 1;
+  }),
 });
 
 export type TaskResponse = z.infer<typeof taskResponseSchema>;

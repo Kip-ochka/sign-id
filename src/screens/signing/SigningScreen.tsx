@@ -4,6 +4,7 @@ import {
   useSigningNavigation,
 } from '../../widgets/signing-process';
 import { SigningDocuments } from '../../widgets/signing-documents';
+import { LoadingScreen } from '../../shared/ui/LoadingScreen';
 
 export function SigningScreen() {
   const { current } = useSigningNavigation();
@@ -12,9 +13,11 @@ export function SigningScreen() {
     return null;
   }
   const certificates = toCertificateList(state.signatureCertificates);
+  if (certificates.status === 'loading') {
+    return <LoadingScreen />;
+  }
   return (
     <SigningDocuments
-      key={certificates.status}
       response={current}
       busy={state.busy}
       phase={state.signaturePhase}

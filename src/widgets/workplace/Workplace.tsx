@@ -58,7 +58,6 @@ export function Workplace({
                     message={
                       item.message || stageLabels.get(item.name) || item.name
                     }
-                    description={item.description}
                     textButton={item.text_button || 'Подробнее'}
                     disabled={busy}
                     onDetails={result?.onDetails}
@@ -73,7 +72,7 @@ export function Workplace({
           className="sign_setting__button-secondary"
           buttons={buttons}
           busy={busy}
-          isLoading={busy}
+          loading={busy}
           onAction={onCheck}
         />
       </div>

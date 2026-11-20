@@ -1,5 +1,16 @@
 import type { SigningCertificate } from '../../shared/services/cryptoPro/adapter';
-import type { CertificateList } from './CertificatePicker';
+
+export type CertificateOption = {
+  id: string;
+  title: string;
+  organization: string;
+  serial: string;
+  expires?: string;
+};
+
+export type CertificateList =
+  | { status: 'loading' }
+  | { status: 'loaded'; options: readonly CertificateOption[] };
 
 export function toCertificateList(
   certificates?: readonly SigningCertificate[],
@@ -26,4 +37,26 @@ export function toCertificateList(
         : '',
     })),
   };
+}
+
+export function toCertificateSelectData(options: readonly CertificateOption[]) {
+  return options.map(({ id, title, organization, serial, expires }) => {
+    const duplicate = options.some(
+      (other) =>
+        other.id !== id &&
+        other.title === title &&
+        other.organization === organization,
+    );
+    return {
+      id,
+      value: id,
+      title,
+      description: organization,
+      serial,
+      expires,
+      text: [title, organization, duplicate && serial]
+        .filter(Boolean)
+        .join(' · '),
+    };
+  });
 }

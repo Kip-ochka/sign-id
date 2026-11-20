@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { localFallback } from '../../shared/api';
 import { getCryptoErrorKey } from '../../shared/lib/cryptoErrors';
 import { loadErrorScreen } from '../../entities/signing';
 import type { RequestOptions } from '../../entities/signing';
@@ -29,23 +28,9 @@ export function useProcessErrors(setState: UpdateProcess) {
       if (options.signal.aborted) {
         return undefined;
       }
-      if (code === 'CSP_VERSION_TOO_LOW') {
-        setState((previous) =>
-          showScreen(previous, {
-            ...localFallback,
-            screen: {
-              ...localFallback.screen,
-              title: 'Версия КриптоПро CSP не подходит',
-              message:
-                'Установите КриптоПро CSP версии 5.0 или выше и повторите проверку.',
-            },
-          }),
-        );
-        return undefined;
-      }
       return showError(getCryptoErrorKey(code, 'setup'), options);
     },
-    [showError, setState],
+    [showError],
   );
 
   return { showError, showSetupError };

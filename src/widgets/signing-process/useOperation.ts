@@ -14,7 +14,6 @@ export function useOperation(
 ) {
   const { inquiryId } = state;
   const activeRequest = useRef<AbortController>();
-  const restartedAfter401 = useRef(false);
   const stop = useCallback(() => {
     activeRequest.current?.abort();
     activeRequest.current = undefined;
@@ -27,7 +26,7 @@ export function useOperation(
   const run = useCallback(
     async <T>(handleRequest: (options: RequestOptions) => Promise<T>) => {
       // Блокируем двойной клик сразу. busy нужен для отображения в React.
-      if (!inquiryId || activeRequest.current) {
+      if (activeRequest.current) {
         return undefined;
       }
       const controller = new AbortController();
@@ -77,19 +76,11 @@ export function useOperation(
             setState(showFallback);
             return undefined;
           }
-          // После первого 401 начинаем START заново. При повторном показываем ошибку.
-          if (error.unauthorized && !restartedAfter401.current) {
-            restartedAfter401.current = true;
+          if (error.unauthorized) {
             setState((previous) =>
               resetProcess(previous, { process: 'START' }, true),
             );
             return executeRequest(handleStart);
-          }
-          if (error.unauthorized) {
-            setState((previous) => ({
-              ...resetProcess(previous, { process: 'WAITING' }, true),
-              settings: previous.settings,
-            }));
           }
           await showError(error.key, options, error.requestId);
           return undefined;
@@ -120,8 +111,5 @@ export function useOperation(
     ],
   );
 
-  const allowManualRestart = useCallback(() => {
-    restartedAfter401.current = false;
-  }, []);
-  return { run, stop, allowManualRestart };
+  return { run, stop };
 }

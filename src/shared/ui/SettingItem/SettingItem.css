@@ -76,15 +76,6 @@
   background-color: var(--error-button-bgcolor);
 }
 
-.sign_setting-item__error-text {
-  --error-button-fsize: 12px;
-  --setting-error-color: rgba(227, 85, 2, 1);
-  color: var(--setting-error-color);
-  font-size: var(--error-button-fsize);
-  line-height: 16px;
-  padding: 4px 0 0 20px;
-}
-
 @media (min-width: 1024px) {
   .sign_setting-item__main {
     padding: 16px 12px;

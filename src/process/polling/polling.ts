@@ -8,10 +8,12 @@ export async function pollUntilProcess(
   task: TaskResponse,
   options: RequestOptions,
   onTask: (task: TaskResponse) => void,
+  onFirstPoll?: () => void,
 ): Promise<ProcessReply> {
-  // Следующая пауза начинается после ответа, поэтому poll-запросы не пересекаются.
   onTask(task);
   await wait(options.settings.pull_time, options.signal);
+  options.signal.throwIfAborted();
+  onFirstPoll?.();
   const reply = await requestPoll(task.task, options);
   if (reply.data.kind !== 'task') {
     return reply;

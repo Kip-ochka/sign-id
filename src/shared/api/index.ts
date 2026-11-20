@@ -2,7 +2,6 @@ export { httpClient } from './http-client';
 export { getSettings, getDocument, pollStatus, state } from './requests';
 export {
   getHttpAttemptLimit,
-  getUnauthorizedAction,
   localFallback,
   parseProcessResult,
 } from './process-contract';

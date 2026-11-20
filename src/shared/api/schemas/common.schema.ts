@@ -69,6 +69,7 @@ export const certificateFiltersSchema = z.object({
 
 export const cryptoproSchema = z.object({
   tsp_address: z.string(),
+  // Пока CHECK и SIGNING используют одну отсоединённую подпись при любом режиме.
   sign_type: z.string(),
   sign_format: z.string(),
   sign_position: z.string(),
@@ -80,18 +81,6 @@ export const cryptoproSchema = z.object({
 const cryptoproSigningSchema = cryptoproSchema.extend({
   tsp_address: z.string().trim().min(1),
 });
-
-export function isSupportedSigningMode({
-  sign_type,
-  sign_format,
-  sign_position,
-}: Pick<Cryptopro, 'sign_type' | 'sign_format' | 'sign_position'>) {
-  return (
-    sign_type === 'single' &&
-    sign_format === 'other' &&
-    sign_position === 'detached'
-  );
-}
 
 // В ответе SETTING приходят только фильтры, без остальных параметров подписи.
 export const cryptoproFiltersOnlySchema = z.object({

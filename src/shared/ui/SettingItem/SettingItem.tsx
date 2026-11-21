@@ -7,6 +7,7 @@ import * as css from './SettingItem.css';
 type Props = {
   status: 'WAIT' | 'RUNNING' | 'SUCCESS' | 'ERROR';
   message: string;
+  description?: string;
   textButton?: string;
   onDetails?: () => void;
   disabled?: boolean;
@@ -26,6 +27,7 @@ const labels = {
 export function SettingItem({
   status,
   message,
+  description,
   textButton = 'Подробнее',
   onDetails,
   disabled,
@@ -65,6 +67,11 @@ export function SettingItem({
           </button>
         )}
       </div>
+      {status === 'ERROR' && description && (
+        <Text size="sm" className="sign_setting-item__error-text">
+          {description}
+        </Text>
+      )}
     </div>
   );
 }

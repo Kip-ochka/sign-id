@@ -19,19 +19,15 @@
 }
 
 .sign_setting__heading {
-  --heading-text-color: #000000;
-  color: var(--heading-text-color);
+  --digital_id_sign_heading-text-color: #000000;
+  color: var(--digital_id_sign_heading-text-color);
   text-align: center;
 }
 
 .sign_setting__subheading {
-  --subtitle-font-black-sign: rgba(31, 31, 34, 1);
-  color: var(--subtitle-font-black-sign);
+  --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
+  color: var(--digital_id_sign_subtitle-font-black-sign);
   text-align: center;
-}
-
-.sign_setting__button-secondary {
-  width: 100%;
 }
 
 @media (min-width: 768px) {

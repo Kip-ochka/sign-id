@@ -53,11 +53,11 @@ export function Workplace({
                 return (
                   <SettingItem
                     key={index}
-
-                    status={result?.state ?? 'WAIT'}
+                    status={result?.state ?? item.state}
                     message={
                       item.message || stageLabels.get(item.name) || item.name
                     }
+                    description={item.description}
                     textButton={item.text_button || 'Подробнее'}
                     disabled={busy}
                     onDetails={result?.onDetails}
@@ -69,7 +69,6 @@ export function Workplace({
           {!onCheck && <Text>Проверка рабочего места пока недоступна.</Text>}
         </div>
         <WorkActions
-          className="sign_setting__button-secondary"
           buttons={buttons}
           busy={busy}
           loading={busy}

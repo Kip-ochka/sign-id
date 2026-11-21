@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "mock": "node --watch mock-server.mjs",
+    "mock": "node --watch backend/mock-api/server.mjs",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "jest --runInBand",

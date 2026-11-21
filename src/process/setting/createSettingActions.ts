@@ -21,6 +21,7 @@ export function createSettingActions({
   applyResponse,
   showSetupError,
   settingCache,
+  diagnoseWorkplace = false,
 }: {
   state: ProcessState;
   setState: UpdateProcess;
@@ -28,6 +29,7 @@ export function createSettingActions({
   applyResponse: ApplyResponse;
   showSetupError: ShowSetupError;
   settingCache: SettingCache;
+  diagnoseWorkplace?: boolean;
 }) {
   const { inquiryId } = state;
   const checkSetting = () => {
@@ -47,11 +49,30 @@ export function createSettingActions({
           ...previous,
           settingProgress: { ...previous.settingProgress, [stage]: result },
         }));
+      let stageStartedAt = 0;
       const result = await checkWorkplace(
         signal,
-        (stage, progress) => update(stage, { state: progress }),
+        (stage, progress) => {
+          if (diagnoseWorkplace) {
+            if (progress === 'RUNNING') {
+              stageStartedAt = performance.now();
+            } else {
+              console.info('[SETTING]', stage, progress, {
+                elapsedMs: Math.round(performance.now() - stageStartedAt),
+              });
+            }
+          }
+          update(stage, { state: progress });
+        },
         async (stage, error) => {
           const code = getCryptoErrorCode(error);
+          if (diagnoseWorkplace) {
+            console.warn('[SETTING]', stage, 'ERROR', {
+              elapsedMs: Math.round(performance.now() - stageStartedAt),
+              code,
+              error,
+            });
+          }
           update(stage, { state: 'ERROR', code });
           if (
             !screen.screen.lists?.testing?.some(({ name }) => name === stage)

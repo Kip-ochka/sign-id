@@ -1,0 +1,21 @@
+.digital_id_sign_kit_select {
+  --digital_id_sign_local-ui-select-border-color: #d9dde1;
+  --digital_id_sign_local-ui-select-text-color: #1f1f22;
+  --digital_id_sign_local-ui-select-background: #f7f8fa;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  border: 1px solid var(--digital_id_sign_local-ui-select-border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--digital_id_sign_local-ui-select-text-color);
+  background: var(--digital_id_sign_local-ui-select-background);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.digital_id_sign_kit_select:disabled {
+  --digital_id_sign_local-ui-disabled-text-color: #73777b;
+  color: var(--digital_id_sign_local-ui-disabled-text-color);
+  cursor: default;
+}

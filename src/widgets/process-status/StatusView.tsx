@@ -7,6 +7,7 @@ import warningIcon from '../../shared/assets/warning.svg';
 import type { DisplayScreen } from '../../entities/signing';
 import { canActivate } from '../../process/status';
 import { ContentWrapper } from '../../shared/ui/ContentWrapper';
+import { ActionGroup } from '../../shared/ui/ActionGroup';
 import * as css from './StatusView.css';
 
 const levels = {
@@ -66,20 +67,19 @@ export function StatusView({
           )}
         </div>
         {actions.length > 0 && (
-          <div className="sign_status__actions">
+          <ActionGroup className="sign_status__actions">
             {actions.map(({ slot, label }) => (
               <Button
                 type="button"
                 theme={slot === 'accent' ? 'primary' : 'secondary'}
                 key={slot}
                 size="large"
-                className="sign_status__button"
                 onClick={() => activate(slot)}
               >
                 {label}
               </Button>
             ))}
-          </div>
+          </ActionGroup>
         )}
       </section>
     </ContentWrapper>

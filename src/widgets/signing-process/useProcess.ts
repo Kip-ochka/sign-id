@@ -22,12 +22,20 @@ import { useSignatureActions } from './useSignatureActions';
 const defaultSettingCache = createSettingCache(() =>
   typeof window === 'undefined' ? undefined : window.navigator.userAgent,
 );
+const diagnosticSettingCache: SettingCache = {
+  has: () => false,
+  save: () => {},
+};
 
 // Композиция фичей; состояние заявки остаётся в React и доступно через Context.
 export function useProcess(
   inquiryId: string,
   settingCache: SettingCache = defaultSettingCache,
+  diagnoseWorkplace = false,
 ) {
+  const workplaceCache = diagnoseWorkplace
+    ? diagnosticSettingCache
+    : settingCache;
   const [state, setState] = useState<ProcessState>(() => ({
     ...initialState(inquiryId),
     session: sessionStorage.read(),
@@ -36,7 +44,7 @@ export function useProcess(
   const { showError, showSetupError } = useProcessErrors(setState);
   const { applyResponse, openSignatureScreen } = useResponse(
     inquiryId,
-    settingCache,
+    workplaceCache,
     setState,
     showSetupError,
   );
@@ -56,7 +64,8 @@ export function useProcess(
     run,
     applyResponse,
     showSetupError,
-    settingCache,
+    settingCache: workplaceCache,
+    diagnoseWorkplace,
   });
   const signature = useSignatureActions(
     state,

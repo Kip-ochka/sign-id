@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import * as css from './styles.css';
 import { readInquiryId } from './shared/readInquiryId';
 import {
   NavigationProvider,
@@ -46,12 +45,23 @@ function ProcessRoot() {
   );
 }
 
-export default function App() {
-  useStyles(css);
-  const [inquiryId] = useState(() => readInquiryId(window.location.search));
+export default function App({
+  workplaceDiagnosticId,
+}: { workplaceDiagnosticId?: string } = {}) {
+  const [inquiryId] = useState(() => {
+    const { search } = window.location;
+    if (workplaceDiagnosticId && !new URLSearchParams(search).has('id')) {
+      return workplaceDiagnosticId;
+    }
+    return readInquiryId(search);
+  });
 
   return (
-    <ProcessProvider key={inquiryId} inquiryId={inquiryId}>
+    <ProcessProvider
+      key={inquiryId}
+      inquiryId={inquiryId}
+      diagnoseWorkplace={inquiryId === workplaceDiagnosticId}
+    >
       <NavigationProvider>
         <ProcessRoot />
       </NavigationProvider>

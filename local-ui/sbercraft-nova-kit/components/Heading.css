@@ -1,0 +1,16 @@
+.digital_id_sign_kit_heading {
+  --digital_id_sign_local-ui-heading-color: #000;
+  margin: 0;
+  color: var(--digital_id_sign_local-ui-heading-color);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.digital_id_sign_kit_h2 {
+  font-size: 32px;
+}
+
+.digital_id_sign_kit_h3 {
+  font-size: 24px;
+}

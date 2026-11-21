@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import { env } from 'node:process';
 import { config, document, errorScreen, process, settings } from './data.mjs';
@@ -7,6 +8,7 @@ const api = '/proxy/services/corp-digital-id-sign/api/public/v1';
 const dict =
   '/proxy/services/sbercraft-dict-ext/serviceProperties/corp-digital-id-sign';
 
+app.use(cors('*'));
 app.use(express.json());
 app.use((_request, response, next) => {
   response.set('X-Request-Id', 'mock-request-id');

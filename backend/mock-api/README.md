@@ -27,6 +27,10 @@
 Кэш SETTING клиента может сразу отправить ready; для проверки SETTING удалите
 `digital_id_sign` из localStorage.
 
+Для заявки `workplace-diagnostics` мок отдаёт SETTING на start и экран
+«Рабочее место готово» на ready. Клиент в dev выбирает эту заявку для URL
+без `id` и пропускает кэш проверки.
+
 Доступны SETTING/SETTING_EMPTY, CHECK, SIGNING/SIGNING_SINGLE,
 STATUS_SUCCESS/WARNING/ERROR/TIMER, TASK, INVALID_RESPONSE и варианты
 CHECK/SIGNING с суффиксами BATCH, ARCHIVED, XML, ATTACHED.

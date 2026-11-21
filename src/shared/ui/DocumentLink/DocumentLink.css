@@ -1,6 +1,6 @@
 .document-link {
-  --item-background-color: rgba(0, 0, 0, 0.04);
-  --item-border-color: transparent;
+  --digital_id_sign_item-background-color: rgba(0, 0, 0, 0.04);
+  --digital_id_sign_item-border-color: transparent;
   flex: 1;
   width: 100%;
   box-sizing: border-box;
@@ -13,10 +13,10 @@
   min-width: 0;
   flex: 1;
   border-radius: 8px;
-  background-color: var(--item-background-color);
+  background-color: var(--digital_id_sign_item-background-color);
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--item-border-color);
+  border: 1px solid var(--digital_id_sign_item-border-color);
   cursor: pointer;
 }
 

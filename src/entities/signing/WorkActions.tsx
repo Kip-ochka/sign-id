@@ -2,6 +2,7 @@ import Button from '@sber-site/malachite-kit/esm/components/Button';
 import { Link } from '@sber-site/malachite-kit';
 import type { ScreenButtons } from '../../shared/api';
 import { httpUrl } from '../../shared/lib/httpUrl';
+import { ActionGroup } from '../../shared/ui/ActionGroup';
 export function WorkActions({
   buttons,
   busy,
@@ -21,12 +22,11 @@ export function WorkActions({
       ? httpUrl(secondary.url)
       : undefined;
   return (
-    <>
+    <ActionGroup className={className}>
       <Button
         type="button"
         theme="primary"
         size="large"
-        className={className}
         disabled={busy || !onAction}
         loading={loading}
         onClick={onAction}
@@ -48,6 +48,6 @@ export function WorkActions({
             {secondary.message}
           </Button>
         ))}
-    </>
+    </ActionGroup>
   );
 }

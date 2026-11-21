@@ -1,18 +1,20 @@
 .sign_status {
+  --digital_id_sign_sign-status-padding-inline: 17px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
   box-sizing: border-box;
   width: 100%;
-  padding-inline: 24px;
+  padding-inline: var(--digital_id_sign_sign-status-padding-inline);
   overflow-wrap: anywhere;
   text-align: center;
 }
 
 .sign_status__icon {
+  --digital_id_sign_sign-status-icon-gap: 20px;
   flex-shrink: 0;
+  margin-bottom: var(--digital_id_sign_sign-status-icon-gap);
 }
 
 .sign_status__copy {
@@ -23,15 +25,17 @@
 }
 
 .sign_status__heading {
+  --digital_id_sign_heading-text-color: #000000;
   margin: 0;
-  color: #000000;
+  color: var(--digital_id_sign_heading-text-color);
 }
 
 .sign_status__details {
+  --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: rgba(31, 31, 34, 1);
+  color: var(--digital_id_sign_subtitle-font-black-sign);
 }
 
 .sign_status__details > p {
@@ -39,19 +43,39 @@
 }
 
 .sign_status__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  --digital_id_sign_sign-status-actions-gap: 24px;
+  --digital_id_sign_sign-status-actions-width: 220px;
+  width: var(--digital_id_sign_sign-status-actions-width);
+  margin-top: var(--digital_id_sign_sign-status-actions-gap);
+}
+
+.sign_actions.sign_status__actions > * {
   width: 100%;
 }
 
-.sign_status__button {
-  width: 100%;
+@media (min-width: 768px) {
+  .sign_status {
+    --digital_id_sign_sign-status-padding-inline: 45px;
+  }
+
+  .sign_status__actions {
+    --digital_id_sign_sign-status-actions-gap: 54px;
+    --digital_id_sign_sign-status-actions-width: 420px;
+  }
 }
 
 @media (min-width: 1024px) {
   .sign_status {
-    gap: 24px;
+    --digital_id_sign_sign-status-padding-inline: 40px;
+  }
+
+  .sign_status__icon {
+    --digital_id_sign_sign-status-icon-gap: 24px;
+  }
+
+  .sign_status__actions {
+    --digital_id_sign_sign-status-actions-gap: 60px;
+    --digital_id_sign_sign-status-actions-width: 220px;
   }
 
   .sign_status__copy {

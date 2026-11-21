@@ -10,10 +10,10 @@
 }
 
 .sign_signinig_stepper {
-  --sign-signing-stpper-bg: rgba(0, 0, 0, 0.04);
-  --sig-signinig-stepper-text: rgba(105, 110, 114, 1);
-  color: var(--sig-signinig-stepper-text);
-  background-color: var(--sign-signing-stpper-bg);
+  --digital_id_sign_sign-signing-stpper-bg: rgba(0, 0, 0, 0.04);
+  --digital_id_sign_sig-signinig-stepper-text: rgba(105, 110, 114, 1);
+  color: var(--digital_id_sign_sig-signinig-stepper-text);
+  background-color: var(--digital_id_sign_sign-signing-stpper-bg);
   box-sizing: border-box;
   border-radius: 30px;
   padding: 10px 12px;
@@ -26,10 +26,10 @@
 }
 
 .sign_signinig_stepper > p {
-  --sign-text-size: 12px;
-  --sign-text-line-height: 16px;
-  line-height: var(--sign-text-line-height);
-  font-size: var(--sign-text-size);
+  --digital_id_sign_sign-text-size: 12px;
+  --digital_id_sign_sign-text-line-height: 16px;
+  line-height: var(--digital_id_sign_sign-text-line-height);
+  font-size: var(--digital_id_sign_sign-text-size);
   font-weight: 500;
   margin: 0;
 }
@@ -45,21 +45,17 @@
 }
 
 .sign_signing__heading {
-  --heading-text-color: #000000;
-  color: var(--heading-text-color);
+  --digital_id_sign_heading-text-color: #000000;
+  color: var(--digital_id_sign_heading-text-color);
   text-align: center;
   padding: 12px 0 0;
 }
 
 .sign_signing__subheading {
-  --subtitle-font-black-sign: rgba(31, 31, 34, 1);
-  color: var(--subtitle-font-black-sign);
+  --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
+  color: var(--digital_id_sign_subtitle-font-black-sign);
   text-align: center;
   padding: 8px 0 0;
-}
-
-.sign_signing__button-secondary {
-  width: 100%;
 }
 
 /* className от Select попадает на внутренний div (MlchtUI-Select__SelectCustom),

@@ -1,6 +1,6 @@
 .sign_check__agreement {
-  --sign-agreement-text-color: rgba(0, 0, 0, 0.5);
-  color: var(--sign-agreement-text-color);
+  --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
+  color: var(--digital_id_sign_sign-agreement-text-color);
   margin: 20px 0 0;
   text-align: center;
 }
@@ -10,8 +10,8 @@
 }
 
 .sign_check__link {
-  --sign-agreement-text-color: rgba(0, 0, 0, 0.5);
-  color: var(--sign-agreement-text-color);
+  --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
+  color: var(--digital_id_sign_sign-agreement-text-color);
   text-decoration: underline;
 }
 

@@ -1,10 +1,10 @@
 .sign {
-  --mobile-bg-color: #f0f3f6;
+  --digital_id_sign_mobile-bg-color: #f0f3f6;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--mobile-bg-color);
+  background: var(--digital_id_sign_mobile-bg-color);
   box-sizing: border-box;
   padding: 0;
   margin: 0;
@@ -15,14 +15,14 @@
 }
 
 .sign-content {
-  --content-bg-color: #ffffff;
+  --digital_id_sign_content-bg-color: #ffffff;
   width: 100%;
   min-height: 492px;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  background: var(--content-bg-color);
+  background: var(--digital_id_sign_content-bg-color);
   border-radius: 24px;
   position: relative;
   margin: 20px 0 0;
@@ -30,8 +30,8 @@
 
 @media (min-width: 768px) {
   .sign {
-    --main-bg-color: #f0f3f6;
-    background: var(--main-bg-color);
+    --digital_id_sign_main-bg-color: #f0f3f6;
+    background: var(--digital_id_sign_main-bg-color);
     padding: 0 22px;
   }
 

@@ -10,7 +10,11 @@ if (!root) {
 
 ReactDOM.render(
   <StrictMode>
-    <App />
+    <App
+      workplaceDiagnosticId={
+        import.meta.env.DEV ? 'workplace-diagnostics' : undefined
+      }
+    />
   </StrictMode>,
   root,
 );

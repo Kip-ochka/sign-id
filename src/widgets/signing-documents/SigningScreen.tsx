@@ -80,7 +80,6 @@ export function SigningScreen({
           />
         </div>
         <WorkActions
-          className="sign_signing__button-secondary"
           buttons={buttons}
           busy={blocked}
           loading={busy || phase !== undefined}

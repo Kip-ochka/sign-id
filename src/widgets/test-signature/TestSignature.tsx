@@ -52,7 +52,7 @@ export function TestSignature({
           />
         </div>
         <WorkActions
-          className="sign_check__button-secondary"
+          className="sign_check__actions"
           buttons={buttons}
           busy={blocked}
           loading={busy || phase !== undefined}

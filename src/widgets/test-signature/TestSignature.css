@@ -18,26 +18,29 @@
 }
 
 .sign_check__heading {
-  --heading-text-color: #000000;
-  color: var(--heading-text-color);
+  --digital_id_sign_heading-text-color: #000000;
+  color: var(--digital_id_sign_heading-text-color);
+  margin: 0;
   text-align: center;
 }
 
 .sign_check__subheading {
-  --subtitle-font-black-sign: rgba(31, 31, 34, 1);
-  color: var(--subtitle-font-black-sign);
+  --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
+  color: var(--digital_id_sign_subtitle-font-black-sign);
+  margin: 0;
   text-align: center;
 }
 
-.sign_check__button-secondary {
-  width: 100%;
+.sign_check__actions {
   margin: 32px 0 0;
 }
 
 /* className от Select попадает на внутренний div (MlchtUI-Select__SelectCustom),
    поэтому ширину задаём через родительский блок */
-.sign_check__main > [class*='Select'] {
+.sign_check__main > [class*='Select'],
+.sign_check__main > .sign_check__select {
   width: 100%;
+  margin: 0;
 }
 
 @media (min-width: 768px) {

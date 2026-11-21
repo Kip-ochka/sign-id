@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.idea/
+*.local
+npm-debug.log*
+
+# Local development materials; backend applications stay versioned.
+/docs/
+/AGENTS.md
+/API_REFACTOR_BRIEF.md
+/API_TESTING.md
+/ERRORS_REFERENCE.md
+/.mock-data/
+/actual-design/
+/DigitalIDSign/
+/.local/
+/src/shared/vendor/
+/test/
+**/__tests__/
+**/*.test.ts
+/jest.config.js
+/mock-server.mjs
+/mock-data.mjs

@@ -1,0 +1,14 @@
+.sign-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.sign-intro__text {
+  --intro-text: #00000080;
+  color: var(--intro-text);
+  max-width: 217px;
+}

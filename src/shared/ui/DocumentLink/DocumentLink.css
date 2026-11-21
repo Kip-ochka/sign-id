@@ -1,0 +1,29 @@
+.document-link {
+  --item-background-color: rgba(0, 0, 0, 0.04);
+  --item-border-color: transparent;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  height: 74px;
+  padding: 23px 16px 23px 26px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1;
+  border-radius: 8px;
+  background-color: var(--item-background-color);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--item-border-color);
+  cursor: pointer;
+}
+
+.document-link__main-text {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}

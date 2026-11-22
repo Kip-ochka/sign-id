@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom';
-import App from './App';
+import DigitalIDSign from './DigitalIDSign';
 
 const root = document.getElementById('root');
 
@@ -10,11 +10,7 @@ if (!root) {
 
 ReactDOM.render(
   <StrictMode>
-    <App
-      workplaceDiagnosticId={
-        import.meta.env.DEV ? 'workplace-diagnostics' : undefined
-      }
-    />
+    <DigitalIDSign />
   </StrictMode>,
   root,
 );

@@ -11,13 +11,11 @@ const ProcessContext = createContext<ReturnType<typeof useProcess> | undefined>(
 export function ProcessProvider({
   inquiryId,
   children,
-  diagnoseWorkplace = false,
 }: {
   inquiryId: string;
   children: ReactNode;
-  diagnoseWorkplace?: boolean;
 }) {
-  const process = useProcess(inquiryId, undefined, diagnoseWorkplace);
+  const process = useProcess(inquiryId);
   const { start } = process.commands;
 
   useEffect(() => {

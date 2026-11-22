@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { readInquiryId } from './shared/readInquiryId';
+import { DigitalIDSignPropsProvider } from './shared/config/digital-id-sign';
+import type { DigitalIDSignProps } from './shared/config/digital-id-sign';
 import {
   NavigationProvider,
   ProcessProvider,
@@ -13,6 +15,8 @@ import { SigningScreen } from './screens/signing';
 import { StartScreen } from './screens/start';
 import { StatusScreen } from './screens/status';
 import { WaitingScreen } from './screens/waiting';
+
+export type { DigitalIDSignProps };
 
 function ProcessScreen() {
   const { current } = useSigningNavigation();
@@ -45,26 +49,16 @@ function ProcessRoot() {
   );
 }
 
-export default function App({
-  workplaceDiagnosticId,
-}: { workplaceDiagnosticId?: string } = {}) {
-  const [inquiryId] = useState(() => {
-    const { search } = window.location;
-    if (workplaceDiagnosticId && !new URLSearchParams(search).has('id')) {
-      return workplaceDiagnosticId;
-    }
-    return readInquiryId(search);
-  });
+export default function DigitalIDSign(props: DigitalIDSignProps) {
+  const [inquiryId] = useState(() => readInquiryId(window.location.search));
 
   return (
-    <ProcessProvider
-      key={inquiryId}
-      inquiryId={inquiryId}
-      diagnoseWorkplace={inquiryId === workplaceDiagnosticId}
-    >
-      <NavigationProvider>
-        <ProcessRoot />
-      </NavigationProvider>
-    </ProcessProvider>
+    <DigitalIDSignPropsProvider value={props}>
+      <ProcessProvider key={inquiryId} inquiryId={inquiryId}>
+        <NavigationProvider>
+          <ProcessRoot />
+        </NavigationProvider>
+      </ProcessProvider>
+    </DigitalIDSignPropsProvider>
   );
 }

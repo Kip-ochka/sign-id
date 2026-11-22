@@ -1,26 +1,26 @@
 .sign_check__agreement {
-  --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
-  color: var(--digital_id_sign_sign-agreement-text-color);
-  margin: 20px 0 0;
-  text-align: center;
+    --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
+    color: var(--digital_id_sign_sign-agreement-text-color);
+    margin: 20px 0 0;
+    text-align: center;
 }
 
 .sign_check_agreement_padding {
-  padding: 0;
+    padding: 0;
 }
 
 .sign_check__link {
-  --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
-  color: var(--digital_id_sign_sign-agreement-text-color);
-  text-decoration: underline;
+    --digital_id_sign_sign-agreement-text-color: rgba(0, 0, 0, 0.5);
+    color: var(--digital_id_sign_sign-agreement-text-color);
+    text-decoration: underline;
 }
 
 .sign_check__link::after {
-  content: '' !important;
+    content: '' !important;
 }
 
 @media (min-width: 1024px) {
-  .sign_check_agreement_padding {
-    padding: 0 55px;
-  }
+    .sign_check_agreement_padding {
+        padding: 0 55px;
+    }
 }

@@ -3,15 +3,13 @@ import { ContentWrapper } from '../ContentWrapper';
 import { Loading } from '../Loading';
 import * as css from './LoadingScreen.css';
 export function LoadingScreen() {
-  useStyles(css);
-  return (
-    <ContentWrapper>
-      <div className="sign-intro" role="status">
-        <Loading />
-        <Text className="sign-intro__text">
-          {'Идёт загрузка.\nПожалуйста, подождите'}
-        </Text>
-      </div>
-    </ContentWrapper>
-  );
+    useStyles(css);
+    return (
+        <ContentWrapper>
+            <div className="sign-intro" role="status">
+                <Loading />
+                <Text className="sign-intro__text">{'Идёт загрузка.\nПожалуйста, подождите'}</Text>
+            </div>
+        </ContentWrapper>
+    );
 }

@@ -1,195 +1,185 @@
 import { z } from 'zod';
 
-import {
-  hash256Schema,
-  hash512Schema,
-  isoDateTimeSchema,
-  nonNegativeIntSchema,
-} from './primitives.schema';
+import { hash256Schema, hash512Schema, isoDateTimeSchema, nonNegativeIntSchema } from './primitives.schema';
 
 // --- Кнопки экранов: url и process взаимоисключающие, на сервере задано ровно одно из полей.
 export const screenButtonActionSchema = z.union([
-  z.object({
-    message: z.string(),
-    url: z.string(),
-    process: z.string().optional(),
-  }),
-  z.object({
-    message: z.string(),
-    process: z.string(),
-    url: z.string().optional(),
-  }),
+    z.object({
+        message: z.string(),
+        url: z.string(),
+        process: z.string().optional(),
+    }),
+    z.object({
+        message: z.string(),
+        process: z.string(),
+        url: z.string().optional(),
+    }),
 ]);
 
 export const screenButtonsSchema = z.object({
-  accent: screenButtonActionSchema,
-  secondary: screenButtonActionSchema.optional(),
+    accent: screenButtonActionSchema,
+    secondary: screenButtonActionSchema.optional(),
 });
 
 // --- Сертификат: данные достаются из самого сертификата, type всегда хардкодим.
 // Та же структура используется и в фильтрах поиска сертификатов, и в запросах.
 export const personSchema = z.object({
-  last_name: z.string(),
-  first_name: z.string(),
-  middle_name: z.string(),
-  inn: z.string(),
-  snils: z.string(),
+    last_name: z.string(),
+    first_name: z.string(),
+    middle_name: z.string(),
+    inn: z.string(),
+    snils: z.string(),
 });
 
 export const organizationSchema = z.object({
-  name: z.string(),
-  inn: z.string(),
-  ogrn: z.string(),
+    name: z.string(),
+    inn: z.string(),
+    ogrn: z.string(),
 });
 
 export const issuerSchema = z.object({
-  name: z.string(),
-  inn: z.string(),
-  ogrn: z.string(),
+    name: z.string(),
+    inn: z.string(),
+    ogrn: z.string(),
 });
 
 export const certificateSchema = z.object({
-  type: z.literal('signed'),
-  serial_number: z.string(),
-  thumbprint: z.string(),
-  expires_at: isoDateTimeSchema.optional(),
-  certificate_base64: z.string(), // содержимое <serial_number>.b64, без PEM-заголовков
-  person: personSchema.partial().optional(),
-  organization: organizationSchema.partial().optional(),
-  issuer: issuerSchema.partial().optional(),
+    type: z.literal('signed'),
+    serial_number: z.string(),
+    thumbprint: z.string(),
+    expires_at: isoDateTimeSchema.optional(),
+    certificate_base64: z.string(), // содержимое <serial_number>.b64, без PEM-заголовков
+    person: personSchema.partial().optional(),
+    organization: organizationSchema.partial().optional(),
+    issuer: issuerSchema.partial().optional(),
 });
 
 // --- cryptopro: фильтры поиска — любое поле и любой вложенный объект может отсутствовать,
 // каждое переданное поле содержит одну строку.
 export const certificateFiltersSchema = z.object({
-  person: personSchema.partial().optional(),
-  organization: organizationSchema.partial().optional(),
-  issuer: issuerSchema.partial().optional(),
+    person: personSchema.partial().optional(),
+    organization: organizationSchema.partial().optional(),
+    issuer: issuerSchema.partial().optional(),
 });
 
 export const cryptoproSchema = z.object({
-  tsp_address: z.string(),
-  // Пока CHECK и SIGNING используют одну отсоединённую подпись при любом режиме.
-  sign_type: z.string(),
-  sign_format: z.string(),
-  sign_position: z.string(),
-  hash256_archived: hash256Schema.optional(),
-  hash512_archived: hash512Schema.optional(),
-  filters: certificateFiltersSchema.optional(),
+    tsp_address: z.string(),
+    // Пока CHECK и SIGNING используют одну отсоединённую подпись при любом режиме.
+    sign_type: z.string(),
+    sign_format: z.string(),
+    sign_position: z.string(),
+    hash256_archived: hash256Schema.optional(),
+    hash512_archived: hash512Schema.optional(),
+    filters: certificateFiltersSchema.optional(),
 });
 
 const cryptoproSigningSchema = cryptoproSchema.extend({
-  tsp_address: z.string().trim().min(1),
+    tsp_address: z.string().trim().min(1),
 });
 
 // В ответе SETTING приходят только фильтры, без остальных параметров подписи.
 export const cryptoproFiltersOnlySchema = z.object({
-  filters: certificateFiltersSchema.optional(),
+    filters: certificateFiltersSchema.optional(),
 });
 
 export const testDocumentSchema = z.object({
-  format: z.string(),
-  hash256: hash256Schema,
-  hash512: hash512Schema,
+    format: z.string(),
+    hash256: hash256Schema,
+    hash512: hash512Schema,
 });
 
 export const consentSchema = z.object({
-  text: z.string(),
-  hypertext: z.string(),
-  url: z.string(),
+    text: z.string(),
+    hypertext: z.string(),
+    url: z.string(),
 });
 
 // --- SETTING
 export const settingItemStateSchema = z.enum(['WAIT', 'SUCCESS', 'ERROR']);
 
 export const settingListSchema = z.object({
-  name: z.string(),
-  state: settingItemStateSchema,
-  message: z.string(),
-  description: z.string(),
-  text_button: z.string(),
+    name: z.string(),
+    state: settingItemStateSchema,
+    message: z.string(),
+    description: z.string(),
+    text_button: z.string(),
 });
 
 export const settingScreenSchema = z.object({
-  process: z.literal('SETTING'),
-  session: z.string(),
-  screen: z.object({
-    title: z.string(),
-    message: z.string(),
-    lists: z
-      .object({ testing: z.array(settingListSchema).optional() })
-      .optional(),
-    buttons: screenButtonsSchema,
-  }),
-  cryptopro: cryptoproFiltersOnlySchema.optional(),
+    process: z.literal('SETTING'),
+    session: z.string(),
+    screen: z.object({
+        title: z.string(),
+        message: z.string(),
+        lists: z.object({ testing: z.array(settingListSchema).optional() }).optional(),
+        buttons: screenButtonsSchema,
+    }),
+    cryptopro: cryptoproFiltersOnlySchema.optional(),
 });
 
 // --- CHECK
 export const checkScreenSchema = z.object({
-  process: z.literal('CHECK'),
-  screen: z.object({
-    title: z.string(),
-    message: z.string(),
-    consent: consentSchema,
-    test_document: testDocumentSchema,
-    buttons: screenButtonsSchema,
-  }),
-  cryptopro: cryptoproSigningSchema,
+    process: z.literal('CHECK'),
+    screen: z.object({
+        title: z.string(),
+        message: z.string(),
+        consent: consentSchema,
+        test_document: testDocumentSchema,
+        buttons: screenButtonsSchema,
+    }),
+    cryptopro: cryptoproSigningSchema,
 });
 
 // --- SIGNING
 export const signingDocumentSchema = z.object({
-  id: z.string(),
-  format: z.string(),
-  title: z.string(),
-  hash256: hash256Schema,
-  hash512: hash512Schema,
+    id: z.string(),
+    format: z.string(),
+    title: z.string(),
+    hash256: hash256Schema,
+    hash512: hash512Schema,
 });
 
 export const signingScreenSchema = z.object({
-  process: z.literal('SIGNING'),
-  token: z.string(),
-  screen: z.object({
-    title: z.string(),
-    message: z.string(),
-    step: z.string().optional(),
-    lists: z.object({
-      documents: z
-        .array(signingDocumentSchema)
-        .nonempty()
-        .refine((documents) => {
-          const ids = documents.map(({ id }) => id);
-          return (
-            ids.every((id) => id.trim().length > 0) &&
-            new Set(ids).size === ids.length
-          );
-        }, 'Документам нужны уникальные непустые id'),
+    process: z.literal('SIGNING'),
+    token: z.string(),
+    screen: z.object({
+        title: z.string(),
+        message: z.string(),
+        step: z.string().optional(),
+        lists: z.object({
+            documents: z
+                .array(signingDocumentSchema)
+                .nonempty()
+                .refine((documents) => {
+                    const ids = documents.map(({ id }) => id);
+                    return ids.every((id) => id.trim().length > 0) && new Set(ids).size === ids.length;
+                }, 'Документам нужны уникальные непустые id'),
+        }),
+        buttons: screenButtonsSchema,
     }),
-    buttons: screenButtonsSchema,
-  }),
-  cryptopro: cryptoproSigningSchema,
+    cryptopro: cryptoproSigningSchema,
 });
 
 // --- STATUS: ERROR сейчас не используется, но может прийти.
 export const statusLevelSchema = z.enum(['SUCCESS', 'WARNING', 'ERROR']);
 
 export const statusScreenSchema = z.object({
-  process: z.literal('STATUS'),
-  timer: nonNegativeIntSchema.optional(),
-  screen: z.object({
-    level: statusLevelSchema,
-    title: z.string(),
-    message: z.string(),
-    buttons: screenButtonsSchema,
-  }),
+    process: z.literal('STATUS'),
+    timer: nonNegativeIntSchema.optional(),
+    screen: z.object({
+        level: statusLevelSchema,
+        title: z.string(),
+        message: z.string(),
+        buttons: screenButtonsSchema,
+    }),
 });
 
 // Ответ state/{event} и poll/status, который пришёл с процессом: дискриминант — process.
 export const processResponseSchema = z.discriminatedUnion('process', [
-  settingScreenSchema,
-  checkScreenSchema,
-  signingScreenSchema,
-  statusScreenSchema,
+    settingScreenSchema,
+    checkScreenSchema,
+    signingScreenSchema,
+    statusScreenSchema,
 ]);
 
 export type ScreenButtonAction = z.infer<typeof screenButtonActionSchema>;

@@ -6,29 +6,25 @@ import { signHashes } from '../../shared/services/cryptoPro/adapter';
 import type { SigningCertificate } from '../../shared/services/cryptoPro/adapter';
 
 export async function prepareSigning(
-  { screen: { lists } }: SigningScreen,
-  selectedCertificate: SigningCertificate,
-  signal: AbortSignal,
+    { screen: { lists } }: SigningScreen,
+    selectedCertificate: SigningCertificate,
+    signal: AbortSignal,
 ): Promise<Extract<SignedEvent, { event: 'signing' }>> {
-  const documents = lists.documents.map((document) => ({ ...document }));
-  const { signatures, certificate } = await signHashes(
-    selectedCertificate,
-    documents,
-    signal,
-  );
+    const documents = lists.documents.map((document) => ({ ...document }));
+    const { signatures, certificate } = await signHashes(selectedCertificate, documents, signal);
 
-  return {
-    event: 'signing',
-    payload: {
-      documents,
-      certificates: [requestCertificateSchema.parse(certificate)],
-    },
-    files: {
-      signatures: documents.map(({ id }, index) => ({
-        fileName: id,
-        base64: signatures[index],
-      })),
-      certificates: createCertificateFiles([certificate]),
-    },
-  };
+    return {
+        event: 'signing',
+        payload: {
+            documents,
+            certificates: [requestCertificateSchema.parse(certificate)],
+        },
+        files: {
+            signatures: documents.map(({ id }, index) => ({
+                fileName: id,
+                base64: signatures[index],
+            })),
+            certificates: createCertificateFiles([certificate]),
+        },
+    };
 }

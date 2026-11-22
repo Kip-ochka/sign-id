@@ -13,103 +13,91 @@ import type { SettingCache } from '../../process/setting';
 import { pollUntilProcess } from '../../process/polling';
 
 export function useResponse(
-  inquiryId: string,
-  settingCache: SettingCache,
-  setState: UpdateProcess,
-  showSetupError: ShowSetupError,
+    inquiryId: string,
+    settingCache: SettingCache,
+    setState: UpdateProcess,
+    showSetupError: ShowSetupError,
 ) {
-  // Вход и BACK всегда загружают актуальную выборку сертификатов.
-  const openSignatureScreen = useCallback(
-    async (screen: CheckScreen | SigningScreen, options: RequestOptions) => {
-      const { signal } = options;
-      setState((previous) => showScreen(previous, screen));
-      try {
-        signal.throwIfAborted();
-        await checkBrowserPlugin();
-        signal.throwIfAborted();
-        await checkCsp();
-        signal.throwIfAborted();
-        const signatureCertificates = await findCertificates(
-          screen.cryptopro.filters,
-        );
-        if (signal.aborted) {
-          return undefined;
-        }
-        if (!signatureCertificates.length) {
-          return showSetupError('NO_CERT', options);
-        }
-        setState((previous) => ({ ...previous, signatureCertificates }));
-      } catch (error) {
-        await showSetupError(getCryptoErrorCode(error), options);
-      }
-      return undefined;
-    },
-    [showSetupError, setState],
-  );
+    // Вход и BACK всегда загружают актуальную выборку сертификатов.
+    const openSignatureScreen = useCallback(
+        async (screen: CheckScreen | SigningScreen, options: RequestOptions) => {
+            const { signal } = options;
+            setState((previous) => showScreen(previous, screen));
+            try {
+                signal.throwIfAborted();
+                await checkBrowserPlugin();
+                signal.throwIfAborted();
+                await checkCsp();
+                signal.throwIfAborted();
+                const signatureCertificates = await findCertificates(screen.cryptopro.filters);
+                if (signal.aborted) {
+                    return undefined;
+                }
+                if (!signatureCertificates.length) {
+                    return showSetupError('NO_CERT', options);
+                }
+                setState((previous) => ({ ...previous, signatureCertificates }));
+            } catch (error) {
+                await showSetupError(getCryptoErrorCode(error), options);
+            }
+            return undefined;
+        },
+        [showSetupError, setState],
+    );
 
-  // Ответ с task запускает polling. Ответ с process определяет следующий экран.
-  const applyResponse = useCallback(
-    async function applyReply(
-      reply: ProcessReply,
-      options: RequestOptions,
-    ): Promise<void> {
-      const { signal } = options;
-      if (signal.aborted) {
-        return undefined;
-      }
-      const { data, requestId } = reply;
-      if (data.kind === 'task') {
-        const next = await pollUntilProcess(
-          data.response,
-          options,
-          (task) => setState((previous) => saveResponse(previous, task)),
-          () =>
-            setState((previous) =>
-              showScreen(previous, { process: 'WAITING' }),
-            ),
-        );
-        return applyReply(next, options);
-      }
-      const screen = data.response;
-      if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
-        setState((previous) => saveResponse(previous, screen));
-        await openSignatureScreen(screen, options);
-        return undefined;
-      }
-      if (screen.process === 'SETTING') {
-        // ready по кэшу использует новую сессию в той же операции.
-        sessionStorage.save(screen.session);
-        options.session = screen.session;
-        // Сохраняем session, оставляя текущий экран до решения по кэшу.
-        setState((previous) => ({
-          ...saveResponse(previous, screen),
-          settingProgress: undefined,
-          workplaceCertificates: undefined,
-        }));
-        let cached = false;
-        try {
-          cached = await settingCache.has(inquiryId);
-        } catch {
-          // Если кэш недоступен, открываем SETTING для ручной проверки.
-        }
-        signal.throwIfAborted();
-        if (cached) {
-          const next = await requestReady(options);
-          return applyReply(next, options);
-        }
-      }
+    // Ответ с task запускает polling. Ответ с process определяет следующий экран.
+    const applyResponse = useCallback(
+        async function applyReply(reply: ProcessReply, options: RequestOptions): Promise<void> {
+            const { signal } = options;
+            if (signal.aborted) {
+                return undefined;
+            }
+            const { data, requestId } = reply;
+            if (data.kind === 'task') {
+                const next = await pollUntilProcess(
+                    data.response,
+                    options,
+                    (task) => setState((previous) => saveResponse(previous, task)),
+                    () => setState((previous) => showScreen(previous, { process: 'WAITING' })),
+                );
+                return applyReply(next, options);
+            }
+            const screen = data.response;
+            if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
+                setState((previous) => saveResponse(previous, screen));
+                await openSignatureScreen(screen, options);
+                return undefined;
+            }
+            if (screen.process === 'SETTING') {
+                // ready по кэшу использует новую сессию в той же операции.
+                sessionStorage.save(screen.session);
+                options.setSession(screen.session);
+                // Сохраняем session, оставляя текущий экран до решения по кэшу.
+                setState((previous) => ({
+                    ...saveResponse(previous, screen),
+                    settingProgress: undefined,
+                    workplaceCertificates: undefined,
+                }));
+                let cached = false;
+                try {
+                    cached = await settingCache.has(inquiryId);
+                } catch {
+                    // Если кэш недоступен, открываем SETTING для ручной проверки.
+                }
+                signal.throwIfAborted();
+                if (cached) {
+                    const next = await requestReady(options);
+                    return applyReply(next, options);
+                }
+            }
 
-      const errorRequestId =
-        screen.process === 'STATUS' && screen.screen.level !== 'SUCCESS'
-          ? requestId
-          : undefined;
-      setState((previous) =>
-        showScreen(saveResponse(previous, screen), screen, errorRequestId),
-      );
-      return undefined;
-    },
-    [inquiryId, openSignatureScreen, settingCache, setState],
-  );
+            const errorRequestId =
+                screen.process === 'STATUS' && screen.screen.level !== 'SUCCESS' ? requestId : undefined;
+            setState((previous) => showScreen(saveResponse(previous, screen), screen, errorRequestId));
+            return undefined;
+        },
+        [inquiryId, openSignatureScreen, settingCache, setState],
+    );
 
-  return { applyResponse, openSignatureScreen };
+    return { applyResponse, openSignatureScreen };
 }

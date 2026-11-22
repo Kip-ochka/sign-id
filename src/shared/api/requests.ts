@@ -4,112 +4,95 @@ import { createStateFormData } from './helpers/files';
 import { parseDocumentResponse } from './helpers/parseDocumentResponse';
 import { httpClient } from './http-client';
 import type {
-  DocumentData,
-  DocumentRequestBody,
-  PollStatusRequestBody,
-  ScreenKey,
-  ScreenResponse,
-  SettingKey,
-  SettingsResponse,
-  StateEvent,
-  StateFiles,
-  StateRequest,
+    DocumentData,
+    DocumentRequestBody,
+    PollStatusRequestBody,
+    ScreenKey,
+    ScreenResponse,
+    SettingKey,
+    SettingsResponse,
+    StateEvent,
+    StateFiles,
+    StateRequest,
 } from './types';
 
-const SETTINGS_URL =
-  '/proxy/services/sbercraft-dict-ext/serviceProperties/corp-digital-id-sign/';
+const SETTINGS_URL = '/proxy/services/sbercraft-dict-ext/serviceProperties/corp-digital-id-sign/';
 const SIGNING_API_URL = '/proxy/services/corp-digital-id-sign/api/public/v1';
 
 // Перегрузка для string предполагает ключ экрана. Динамический string может содержать 'settings'.
 export function getSettings(
-  key: 'settings',
-  signal?: AbortSignal,
-  session?: string | null,
+    key: 'settings',
+    signal?: AbortSignal,
+    session?: string | null,
 ): Promise<AxiosResponse<SettingsResponse>>;
 export function getSettings(
-  key: ScreenKey,
-  signal?: AbortSignal,
-  session?: string | null,
+    key: ScreenKey,
+    signal?: AbortSignal,
+    session?: string | null,
 ): Promise<AxiosResponse<ScreenResponse>>;
 export function getSettings(
-  key: SettingKey,
-  signal?: AbortSignal,
-  session: string | null = null,
+    key: SettingKey,
+    signal?: AbortSignal,
+    session: string | null = null,
 ): Promise<AxiosResponse<SettingsResponse | ScreenResponse>> {
-  return httpClient.get<SettingsResponse | ScreenResponse>(SETTINGS_URL + key, {
-    signal,
-    headers: { 'Session-id': session || null },
-  });
+    return httpClient.get<SettingsResponse | ScreenResponse>(SETTINGS_URL + key, {
+        signal,
+        headers: { 'Session-id': session || null },
+    });
 }
 
 export const getDocument = async (
-  body: DocumentRequestBody,
-  signal?: AbortSignal,
-  session: string | null = null,
-  token?: string,
+    body: DocumentRequestBody,
+    signal?: AbortSignal,
+    session: string | null = null,
+    token?: string,
 ): Promise<DocumentData> => {
-  const { data, headers } = await httpClient.post<ArrayBuffer>(
-    `${SIGNING_API_URL}/document`,
-    body,
-    {
-      responseType: 'arraybuffer',
-      signal,
-      headers: { 'Session-id': session || null, 'X-integrity-token': token },
-      validateStatus: (status) => status === 200,
-    },
-  );
+    const { data, headers } = await httpClient.post<ArrayBuffer>(`${SIGNING_API_URL}/document`, body, {
+        responseType: 'arraybuffer',
+        signal,
+        headers: { 'Session-id': session || null, 'X-integrity-token': token },
+        validateStatus: (status) => status === 200,
+    });
 
-  return parseDocumentResponse(data, headers['content-type']);
+    return parseDocumentResponse(data, headers['content-type']);
 };
 
 export const pollStatus = (
-  body: PollStatusRequestBody,
-  signal?: AbortSignal,
-  session: string | null = null,
+    body: PollStatusRequestBody,
+    signal?: AbortSignal,
+    session: string | null = null,
 ): Promise<AxiosResponse<unknown>> =>
-  httpClient.post<unknown>(`${SIGNING_API_URL}/poll/status`, body, {
-    signal,
-    headers: { 'Session-id': session || null },
-  });
+    httpClient.post<unknown>(`${SIGNING_API_URL}/poll/status`, body, {
+        signal,
+        headers: { 'Session-id': session || null },
+    });
 
 type StateArgs = {
-  [Event in StateEvent]: Event extends 'check' | 'signing'
-    ? [
-        event: Event,
-        body: StateRequest[Event] | undefined,
-        files: StateFiles,
-        signal?: AbortSignal,
-        session?: string | null,
-        token?: string,
-      ]
-    : [
-        event: Event,
-        body: StateRequest[Event],
-        signal?: AbortSignal,
-        session?: string | null,
-      ];
+    [Event in StateEvent]: Event extends 'check' | 'signing'
+        ? [
+              event: Event,
+              body: StateRequest[Event] | undefined,
+              files: StateFiles,
+              signal?: AbortSignal,
+              session?: string | null,
+              token?: string,
+          ]
+        : [event: Event, body: StateRequest[Event], signal?: AbortSignal, session?: string | null];
 }[StateEvent];
 
 export const state = async (
-  ...[event, body, filesOrSignal, signalOrSession, session, token]: StateArgs
+    ...[event, body, filesOrSignal, signalOrSession, session, token]: StateArgs
 ): Promise<AxiosResponse<unknown>> => {
-  const signed = event === 'check' || event === 'signing';
-  const payload = signed
-    ? createStateFormData(event, body, filesOrSignal)
-    : body;
-  const sessionId = signed ? session : signalOrSession;
+    const signed = event === 'check' || event === 'signing';
+    const payload = signed ? createStateFormData(event, body, filesOrSignal) : body;
+    const sessionId = signed ? session : signalOrSession;
 
-  return httpClient.post<unknown>(
-    `${SIGNING_API_URL}/state/${event}`,
-    payload,
-    {
-      signal: signed ? signalOrSession : filesOrSignal,
-      headers: {
-        'Session-id': sessionId || null,
-        'X-integrity-token': event === 'signing' ? token : undefined,
-      },
-      validateStatus: (status) =>
-        status === 303 || (status >= 200 && status < 300),
-    },
-  );
+    return httpClient.post<unknown>(`${SIGNING_API_URL}/state/${event}`, payload, {
+        signal: signed ? signalOrSession : filesOrSignal,
+        headers: {
+            'Session-id': sessionId || null,
+            'X-integrity-token': event === 'signing' ? token : undefined,
+        },
+        validateStatus: (status) => status === 303 || (status >= 200 && status < 300),
+    });
 };

@@ -1,56 +1,56 @@
 .sign_check {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  width: 100%;
-  box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .sign_check__main {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .sign_check__heading {
-  --digital_id_sign_heading-text-color: #000000;
-  color: var(--digital_id_sign_heading-text-color);
-  margin: 0;
-  text-align: center;
+    --digital_id_sign_heading-text-color: #000000;
+    color: var(--digital_id_sign_heading-text-color);
+    margin: 0;
+    text-align: center;
 }
 
 .sign_check__subheading {
-  --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
-  color: var(--digital_id_sign_subtitle-font-black-sign);
-  margin: 0;
-  text-align: center;
+    --digital_id_sign_subtitle-font-black-sign: rgba(31, 31, 34, 1);
+    color: var(--digital_id_sign_subtitle-font-black-sign);
+    margin: 0;
+    text-align: center;
 }
 
 .sign_check__actions {
-  margin: 32px 0 0;
+    margin: 32px 0 0;
 }
 
 /* className от Select попадает на внутренний div (MlchtUI-Select__SelectCustom),
    поэтому ширину задаём через родительский блок */
 .sign_check__main > [class*='Select'],
 .sign_check__main > .sign_check__select {
-  width: 100%;
-  margin: 0;
+    width: 100%;
+    margin: 0;
 }
 
 @media (min-width: 768px) {
-  .sign_check {
-    max-width: 420px;
-  }
+    .sign_check {
+        max-width: 420px;
+    }
 }
 
 @media (min-width: 1024px) {
-  .sign_check {
-    max-width: 540px;
-  }
+    .sign_check {
+        max-width: 540px;
+    }
 }

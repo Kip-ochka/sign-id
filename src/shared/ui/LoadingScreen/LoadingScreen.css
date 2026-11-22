@@ -1,14 +1,14 @@
 .sign-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
 }
 
 .sign-intro__text {
-  --digital_id_sign_intro-text: #00000080;
-  color: var(--digital_id_sign_intro-text);
-  max-width: 217px;
+    --digital_id_sign_intro-text: #00000080;
+    color: var(--digital_id_sign_intro-text);
+    max-width: 217px;
 }

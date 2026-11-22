@@ -7,24 +7,24 @@ import { nonNegativeIntSchema } from './primitives.schema';
 export const settingKeySchema = z.string();
 
 export const settingsResponseSchema = z.object({
-  retry_time: nonNegativeIntSchema,
-  retry_addition: nonNegativeIntSchema,
-  retry_count: nonNegativeIntSchema,
-  pull_time: nonNegativeIntSchema,
+    retry_time: nonNegativeIntSchema,
+    retry_addition: nonNegativeIntSchema,
+    retry_count: nonNegativeIntSchema,
+    pull_time: nonNegativeIntSchema,
 });
 
 // --- settings/{key} для ключа-кода ошибки
 // Рендерится только предупреждениями, поэтому level здесь — литерал 'WARNING'.
 export const screenSchema = z.object({
-  level: z.literal('WARNING'),
-  title: z.string(),
-  message: z.string(),
-  buttons: screenButtonsSchema,
+    level: z.literal('WARNING'),
+    title: z.string(),
+    message: z.string(),
+    buttons: screenButtonsSchema,
 });
 
 export const screenResponseSchema = z.object({
-  process: z.string(), // По умолчанию 'STATUS'
-  screen: screenSchema,
+    process: z.string(), // По умолчанию 'STATUS'
+    screen: screenSchema,
 });
 
 export type SettingKey = z.infer<typeof settingKeySchema>;

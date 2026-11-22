@@ -1,49 +1,49 @@
 .digital_id_sign_kit_button {
-  --digital_id_sign_local-ui-button-border-color: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--digital_id_sign_local-ui-button-border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 500;
-  padding: 12px 20px;
-  overflow-wrap: anywhere;
+    --digital_id_sign_local-ui-button-border-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--digital_id_sign_local-ui-button-border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 500;
+    padding: 12px 20px;
+    overflow-wrap: anywhere;
 }
 
 .digital_id_sign_kit_large {
-  min-height: 56px;
+    min-height: 56px;
 }
 
 .digital_id_sign_kit_medium {
-  min-height: 44px;
+    min-height: 44px;
 }
 
 .digital_id_sign_kit_primary {
-  --digital_id_sign_local-ui-primary-text-color: #fff;
-  --digital_id_sign_local-ui-accent-color: #107f8c;
-  color: var(--digital_id_sign_local-ui-primary-text-color);
-  background: var(--digital_id_sign_local-ui-accent-color);
+    --digital_id_sign_local-ui-primary-text-color: #fff;
+    --digital_id_sign_local-ui-accent-color: #107f8c;
+    color: var(--digital_id_sign_local-ui-primary-text-color);
+    background: var(--digital_id_sign_local-ui-accent-color);
 }
 
 .digital_id_sign_kit_primary:hover:not(:disabled) {
-  --digital_id_sign_local-ui-accent-hover-color: #0b6874;
-  background: var(--digital_id_sign_local-ui-accent-hover-color);
+    --digital_id_sign_local-ui-accent-hover-color: #0b6874;
+    background: var(--digital_id_sign_local-ui-accent-hover-color);
 }
 
 .digital_id_sign_kit_secondary {
-  --digital_id_sign_local-ui-secondary-background: #f0f3f6;
-  --digital_id_sign_local-ui-accent-color: #107f8c;
-  background: var(--digital_id_sign_local-ui-secondary-background);
-  color: var(--digital_id_sign_local-ui-accent-color);
+    --digital_id_sign_local-ui-secondary-background: #f0f3f6;
+    --digital_id_sign_local-ui-accent-color: #107f8c;
+    background: var(--digital_id_sign_local-ui-secondary-background);
+    color: var(--digital_id_sign_local-ui-accent-color);
 }
 
 .digital_id_sign_kit_button:disabled {
-  --digital_id_sign_local-ui-disabled-background: #e8ebed;
-  --digital_id_sign_local-ui-disabled-text-color: #73777b;
-  background: var(--digital_id_sign_local-ui-disabled-background);
-  color: var(--digital_id_sign_local-ui-disabled-text-color);
-  cursor: default;
+    --digital_id_sign_local-ui-disabled-background: #e8ebed;
+    --digital_id_sign_local-ui-disabled-text-color: #73777b;
+    background: var(--digital_id_sign_local-ui-disabled-background);
+    color: var(--digital_id_sign_local-ui-disabled-text-color);
+    cursor: default;
 }

@@ -27,7 +27,7 @@ export function WorkActions({
         type="button"
         theme="primary"
         size="large"
-        disabled={busy || !onAction}
+        disabled={!loading && (busy || !onAction)}
         loading={loading}
         onClick={onAction}
       >

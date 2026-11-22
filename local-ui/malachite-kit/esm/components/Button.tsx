@@ -11,12 +11,14 @@ export default function Button({
   size = 'large',
   className = '',
   type = 'button',
+  onClick,
   ...props
 }: Props) {
   return (
     <button
       aria-busy={loading || undefined}
       {...props}
+      onClick={loading ? undefined : onClick}
       type={type}
       className={[
         'digital_id_sign_kit_button',

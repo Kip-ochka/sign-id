@@ -1,4 +1,4 @@
-import type { ProcessState, UpdateProcess, RunOperation, ApplyResponse, ShowError } from '../../entities/signing';
+import type { ApplyResponse, ProcessState, RunOperation, ShowError, UpdateProcess } from '../../entities/signing';
 import { prepareCheck } from '../../process/check';
 import { prepareSigning } from '../../process/signing';
 import { createSignatureSubmission } from '../../process/signature';
@@ -8,17 +8,17 @@ export function useSignatureActions(
     setState: UpdateProcess,
     run: RunOperation,
     applyResponse: ApplyResponse,
-    showError: ShowError,
+    showError: ShowError
 ) {
     const submitSignature = createSignatureSubmission(state, setState, run, applyResponse, showError);
     const submitSelectedCertificate = (thumbprint: string) => {
         const { screen, signatureCertificates } = state;
-        const selectedCertificate = signatureCertificates?.find((certificate) => certificate.thumbprint === thumbprint);
+        const selectedCertificate = signatureCertificates?.find(certificate => certificate.thumbprint === thumbprint);
         if (!selectedCertificate || (screen.process !== 'CHECK' && screen.process !== 'SIGNING')) {
             return undefined;
         }
-        return submitSignature((signal) => {
-            setState((previous) => ({ ...previous, signaturePhase: 'signing' }));
+        return submitSignature(signal => {
+            setState(previous => ({ ...previous, signaturePhase: 'signing' }));
             if (screen.process === 'CHECK') {
                 return prepareCheck(screen, selectedCertificate, signal);
             }
@@ -38,6 +38,6 @@ export function useSignatureActions(
                 return submitSelectedCertificate(thumbprint);
             }
             return undefined;
-        },
+        }
     };
 }

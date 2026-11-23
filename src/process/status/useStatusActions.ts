@@ -53,7 +53,7 @@ export function useStatusActions(screen: DisplayScreen, back: () => void | Promi
             window.location.assign(action.url);
             return undefined;
         },
-        [back, screen],
+        [back, screen]
     );
 
     useLayoutEffect(() => {

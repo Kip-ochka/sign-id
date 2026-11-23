@@ -1,5 +1,5 @@
 import { useStatusActions } from '../../process/status';
-import { useSigningProcess, useSigningNavigation } from '../../widgets/signing-process';
+import { useSigningNavigation, useSigningProcess } from '../../widgets/signing-process';
 import { StatusView } from '../../widgets/process-status';
 
 export function StatusScreen() {
@@ -13,7 +13,7 @@ export function StatusScreen() {
         <StatusView
             response={current}
             requestId={state.requestId}
-            activate={(slot) => {
+            activate={slot => {
                 activate(slot);
             }}
         />

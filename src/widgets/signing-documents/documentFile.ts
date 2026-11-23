@@ -8,7 +8,7 @@ const registry = ('default' in database ? database.default : database) as Record
 >;
 
 Object.entries(registry).forEach(([type, { source, extensions }]) => {
-    extensions?.forEach((extension) => {
+    extensions?.forEach(extension => {
         const previous = mimeByExtension.get(extension);
         if (!previous || previous === binaryMime || source === 'iana') {
             mimeByExtension.set(extension, type);
@@ -17,10 +17,10 @@ Object.entries(registry).forEach(([type, { source, extensions }]) => {
 });
 
 const rasterHeaders: Readonly<Record<string, (binary: string) => boolean>> = {
-    'image/png': (binary) => binary.startsWith('\x89PNG\r\n\x1a\n'),
-    'image/jpeg': (binary) => binary.startsWith('\xff\xd8\xff'),
-    'image/gif': (binary) => /^GIF8[79]a/.test(binary),
-    'image/webp': (binary) => /^RIFF[\s\S]{4}WEBP/.test(binary),
+    'image/png': binary => binary.startsWith('\x89PNG\r\n\x1a\n'),
+    'image/jpeg': binary => binary.startsWith('\xff\xd8\xff'),
+    'image/gif': binary => /^GIF8[79]a/.test(binary),
+    'image/webp': binary => /^RIFF[\s\S]{4}WEBP/.test(binary)
 };
 
 export function createDocumentFile({ title, format, binary }: { title: string; format: string; binary: string }) {
@@ -35,7 +35,7 @@ export function createDocumentFile({ title, format, binary }: { title: string; f
     const reserved = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])$/i;
     const filename = (reserved.test(safeName) ? '_' : '') + (safeName || 'document');
     const type = mimeByExtension.get(extension) ?? binaryMime;
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
     const file = new File([bytes], filename + suffix, { type });
     let kind: 'image' | 'pdf' | 'text' | undefined;
     if (rasterHeaders[type]?.(binary)) {

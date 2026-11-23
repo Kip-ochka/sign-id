@@ -1,4 +1,5 @@
 import type { Ref, SelectHTMLAttributes } from 'react';
+
 import './Select.css';
 type SelectValue = {
     id: string | number;
@@ -26,7 +27,7 @@ export default function Select({
         <select
             {...props}
             value={value ? String(value.id) : ''}
-            onChange={(event) => {
+            onChange={event => {
                 const option = data.find(({ id }) => String(id) === event.target.value);
                 if (option) {
                     onChange?.(option);
@@ -35,7 +36,7 @@ export default function Select({
             ref={inputRef as unknown as Ref<HTMLSelectElement>}
             className={['digital_id_sign_kit_select', className].join(' ')}
         >
-            <option value="">{placeholder}</option>
+            <option value=''>{placeholder}</option>
             {data.map(({ id, text, subtext }) => (
                 <option key={id} value={String(id)}>
                     {[text, subtext].filter(Boolean).join(' · ')}

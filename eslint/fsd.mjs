@@ -22,8 +22,8 @@ export const importBoundaries = {
         messages: {
             upward: 'FSD: {{from}} cannot import the higher layer {{to}}.',
             sibling: 'FSD: slices in {{layer}} must not import each other.',
-            publicApi: 'FSD: import {{slice}} through its public index.ts.',
-        },
+            publicApi: 'FSD: import {{slice}} through its public index.ts.'
+        }
     },
     create(context) {
         const filename = context.filename;
@@ -49,7 +49,7 @@ export const importBoundaries = {
                 context.report({
                     node: source,
                     messageId: 'upward',
-                    data: { from: from.layer, to: to.layer },
+                    data: { from: from.layer, to: to.layer }
                 });
                 return;
             }
@@ -58,7 +58,7 @@ export const importBoundaries = {
                     context.report({
                         node: source,
                         messageId: 'sibling',
-                        data: { layer: from.layer },
+                        data: { layer: from.layer }
                     });
                 }
                 return;
@@ -72,7 +72,7 @@ export const importBoundaries = {
                 context.report({
                     node: source,
                     messageId: 'publicApi',
-                    data: { slice },
+                    data: { slice }
                 });
             }
         }
@@ -80,9 +80,9 @@ export const importBoundaries = {
             ImportDeclaration: check,
             ExportNamedDeclaration: check,
             ExportAllDeclaration: check,
-            ImportExpression: check,
+            ImportExpression: check
         };
-    },
+    }
 };
 
 export default { rules: { 'import-boundaries': importBoundaries } };

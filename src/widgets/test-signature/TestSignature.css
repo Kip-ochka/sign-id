@@ -45,6 +45,7 @@
 
 @media (min-width: 768px) {
     .sign_check {
+        box-sizing: content-box;
         max-width: 420px;
     }
 }

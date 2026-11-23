@@ -1,12 +1,14 @@
-import type { SettingList, SettingScreen as SettingResponse } from '../../shared/api';
 import Heading from '@sber-site/sbercraft-nova-kit/components/Heading';
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
 import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
-import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 
+import type { SettingList, SettingScreen as SettingResponse } from '../../shared/api';
+import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 import { SettingItem } from '../../shared/ui/SettingItem';
 import { WorkActions } from '../../entities/signing';
+
 import * as css from './Workplace.css';
+
 export type SettingProgress = {
     state: SettingList['state'] | 'RUNNING';
     onDetails?: () => void;
@@ -14,13 +16,13 @@ export type SettingProgress = {
 const stageLabels = new Map([
     ['extension', 'Расширение'],
     ['program', 'Криптопровайдер'],
-    ['certificate', 'Сертификаты'],
+    ['certificate', 'Сертификаты']
 ]);
 export function Workplace({
     response,
     busy,
     progress,
-    onCheck,
+    onCheck
 }: {
     response: SettingResponse;
     busy: boolean;
@@ -33,12 +35,12 @@ export function Workplace({
     const rows = lists?.testing ?? [];
     return (
         <ContentWrapper>
-            <div className="sign_setting">
-                <div className="sign_setting__main">
-                    <Heading tag="h1" size={isDesktop ? 'h2' : 'h3'} className="sign_setting__heading">
+            <div className='sign_setting'>
+                <div className='sign_setting__main'>
+                    <Heading tag='h1' size={isDesktop ? 'h2' : 'h3'} className='sign_setting__heading'>
                         {title}
                     </Heading>
-                    <Text className="sign_setting__subheading">{message}</Text>
+                    <Text className='sign_setting__subheading'>{message}</Text>
                     {rows.length > 0 && (
                         <>
                             {rows.map((item, index) => {

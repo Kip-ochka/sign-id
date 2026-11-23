@@ -67,7 +67,7 @@ function readString({ tag, bytes }: DerValue) {
             case 18: // NumericString
             case 19: // PrintableString
             case 22: // IA5String
-                return bytes.every((byte) => byte < 128) ? new TextDecoder().decode(bytes) : undefined;
+                return bytes.every(byte => byte < 128) ? new TextDecoder().decode(bytes) : undefined;
             case 30: // BMPString
                 return new TextDecoder('utf-16be', { fatal: true }).decode(bytes);
             default:
@@ -80,7 +80,7 @@ function readString({ tag, bytes }: DerValue) {
 
 export function readHexDnValue(hex: string) {
     try {
-        const bytes = Uint8Array.from(hex.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
+        const bytes = Uint8Array.from(hex.match(/../g) ?? [], pair => Number.parseInt(pair, 16));
         const value = readValue(bytes, 0);
         return value.end === bytes.length ? readString(value) : undefined;
     } catch {
@@ -90,8 +90,8 @@ export function readHexDnValue(hex: string) {
 
 function readName(name: DerValue) {
     const attributes = new Map<string, string[]>();
-    children(name, 0x30).forEach((rdn) => {
-        children(rdn, 0x31).forEach((attribute) => {
+    children(name, 0x30).forEach(rdn => {
+        children(rdn, 0x31).forEach(attribute => {
             const [id, value] = children(attribute, 0x30);
             const oid = id?.tag === 6 && readOid(id.bytes);
             if (oid && value) {
@@ -105,7 +105,7 @@ function readName(name: DerValue) {
 }
 
 export function readCertificateDerNames(base64: string) {
-    const bytes = Uint8Array.from(atob(base64.replace(/\s/g, '')), (char) => char.charCodeAt(0));
+    const bytes = Uint8Array.from(atob(base64.replace(/\s/g, '')), char => char.charCodeAt(0));
     const certificate = readValue(bytes, 0);
     const [tbs, algorithm, signature, extra] = children(certificate, 0x30);
     if (certificate.end !== bytes.length || algorithm?.tag !== 0x30 || signature?.tag !== 3 || extra) {
@@ -124,6 +124,6 @@ export function readCertificateDerNames(base64: string) {
     }
     return {
         subject: readName(fields[issuerIndex + 2]),
-        issuer: readName(fields[issuerIndex]),
+        issuer: readName(fields[issuerIndex])
     };
 }

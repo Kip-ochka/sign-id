@@ -2,8 +2,7 @@ import { findCertificates } from '../../shared/services/cryptoPro/adapter';
 import { CryptoProError } from '../../shared/services/cryptoPro/error';
 import { checkBrowserPlugin, readCspVersion } from '../../shared/services/cryptoPro/workplace';
 
-import { settingStages } from '../../entities/signing';
-import type { SettingStage } from '../../entities/signing';
+import { type SettingStage, settingStages } from '../../entities/signing';
 
 export async function checkCsp() {
     const csp = await readCspVersion();
@@ -15,7 +14,7 @@ export async function checkCsp() {
 export async function checkWorkplace(
     signal: AbortSignal,
     update: (stage: SettingStage, state: 'RUNNING' | 'SUCCESS') => void,
-    fail: (stage: SettingStage, error: unknown) => Promise<void>,
+    fail: (stage: SettingStage, error: unknown) => Promise<void>
 ) {
     let certificates: Awaited<ReturnType<typeof findCertificates>> | undefined;
     const completed = await settingStages.reduce(async (previous, stage) => {

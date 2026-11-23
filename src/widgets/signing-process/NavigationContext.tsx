@@ -1,5 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 
 import type { DisplayScreen } from '../../entities/signing';
 import { useSigningProcess } from './ProcessContext';
@@ -20,7 +19,7 @@ const NavigationContext = createContext<SigningNavigation | undefined>(undefined
 export function NavigationProvider({ children }: { children: ReactNode }) {
     const {
         state,
-        commands: { back },
+        commands: { back }
     } = useSigningProcess();
     const { screen, previousProcess, backScreen, lastResponse } = state;
     const target = lastResponse && ('task' in lastResponse ? 'WAITING' : lastResponse.process);
@@ -31,9 +30,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             target,
             // После ожидания или ошибки BACK ведёт к последнему рабочему экрану.
             backTo: backScreen?.process ?? 'START',
-            back,
+            back
         }),
-        [screen, previousProcess, backScreen, target, back],
+        [screen, previousProcess, backScreen, target, back]
     );
 
     return <NavigationContext.Provider value={navigation}>{children}</NavigationContext.Provider>;

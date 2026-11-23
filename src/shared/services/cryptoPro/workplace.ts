@@ -1,4 +1,4 @@
-import { CryptoProError, cryptoOperation } from './error';
+import { cryptoOperation, CryptoProError } from './error';
 
 type PluginWindow = Window & {
     cadesplugin_extension_loaded_callback?: () => void;
@@ -63,7 +63,7 @@ export async function readCspVersion() {
         });
         const [major, minor, build] = parts.map(Number);
         if (
-            parts.some((value) => typeof value !== 'number' && (typeof value !== 'string' || !/^\d+$/.test(value))) ||
+            parts.some(value => typeof value !== 'number' && (typeof value !== 'string' || !/^\d+$/.test(value))) ||
             ![major, minor, build].every(Number.isSafeInteger) ||
             major <= 0 ||
             minor < 0 ||

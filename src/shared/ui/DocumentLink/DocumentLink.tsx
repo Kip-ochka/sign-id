@@ -1,17 +1,18 @@
 import Icon from '@sber-site/malachite-kit/esm/components/Icon';
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
+
 import * as css from './DocumentLink.css';
 const icons = {
     DOC: 'doc-file',
     PDF: 'pdf-file',
-    OTHER: 'default-file',
+    OTHER: 'default-file'
 } as const;
 export function DocumentLink({
     format,
     title,
     disabled,
     pending,
-    onClick,
+    onClick
 }: {
     format: 'DOC' | 'PDF' | 'OTHER';
     title: string;
@@ -22,20 +23,20 @@ export function DocumentLink({
     useStyles(css);
     return (
         <div
-            role="button"
+            role='button'
             tabIndex={disabled || pending ? -1 : 0}
-            className="document-link"
+            className='document-link'
             aria-disabled={disabled || pending || undefined}
             aria-busy={pending || undefined}
             aria-label={'Открыть документ «' + title + '»'}
             title={title}
-            onKeyDown={(event) => {
+            onKeyDown={event => {
                 if (!disabled && !pending && (event.key === 'Enter' || event.key === ' ')) {
                     event.preventDefault();
                     onClick?.();
                 }
             }}
-            onClick={(event) => {
+            onClick={event => {
                 if (disabled || pending) {
                     return;
                 }
@@ -43,11 +44,11 @@ export function DocumentLink({
                 onClick?.();
             }}
         >
-            <Icon size="24" name={icons[format]} theme="ghost" />
-            <Text tag="p" className="document-link__main-text">
+            <Icon size='24' name={icons[format]} theme='ghost' />
+            <Text tag='p' className='document-link__main-text'>
                 {title}
             </Text>
-            <Icon size="24" name="chevron-right-small" theme="ghost" />
+            <Icon size='24' name='chevron-right-small' theme='ghost' />
         </div>
     );
 }

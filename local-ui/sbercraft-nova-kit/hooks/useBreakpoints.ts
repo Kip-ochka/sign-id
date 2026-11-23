@@ -4,7 +4,7 @@ export function useBreakpoints() {
         () =>
             typeof window !== 'undefined' &&
             typeof window.matchMedia === 'function' &&
-            window.matchMedia('(min-width: 1024px)').matches,
+            window.matchMedia('(min-width: 1024px)').matches
     );
     useEffect(() => {
         if (typeof window.matchMedia !== 'function') {

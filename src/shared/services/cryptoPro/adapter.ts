@@ -1,8 +1,15 @@
 import type { Certificate as PluginCertificate } from 'crypto-pro-actual-cades-plugin';
-import type { Certificate, CertificateFilters, TestDocument } from '../../api';
-import { base64Schema, hash256Schema, hash512Schema } from '../../api';
+
+import {
+    base64Schema,
+    type Certificate,
+    type CertificateFilters,
+    hash256Schema,
+    hash512Schema,
+    type TestDocument
+} from '../../api';
 import { matchCertificate, readCertificateNames, readCertificateNamesByOid } from './certificateNames';
-import { CryptoProError, cryptoOperation } from './error';
+import { cryptoOperation, CryptoProError } from './error';
 
 type CertificateNames = ReturnType<typeof readCertificateNamesByOid>;
 export type SigningCertificate = Omit<Certificate, 'certificate_base64'> & {
@@ -40,7 +47,7 @@ async function getValidCertificates() {
         throw error;
     }
     const now = Date.now();
-    return certificates.filter((certificate) => {
+    return certificates.filter(certificate => {
         if (!certificate.validFrom || !certificate.validTo) {
             return false;
         }
@@ -68,7 +75,7 @@ async function readCertificate(certificate: PluginCertificate, { person, organiz
         type: 'signed' as const,
         serial_number: serial,
         thumbprint: certificate.thumbprint,
-        expires_at: expiry.toISOString(),
+        expires_at: expiry.toISOString()
     };
 }
 
@@ -104,7 +111,7 @@ export async function findCertificates(filters?: CertificateFilters) {
             try {
                 certificates.set(thumbprint, {
                     ...(await readCertificate(certificate, names)),
-                    pluginCertificate: certificate,
+                    pluginCertificate: certificate
                 });
             } catch {
                 // Без реквизитов для запроса этот сертификат не предлагается.
@@ -141,29 +148,29 @@ export async function signHash(certificate: SigningCertificate, hashes: SigningH
     const result = await signHashes(certificate, [hashes], signal);
     return {
         signatureBase64: result.signatures[0],
-        certificate: result.certificate,
+        certificate: result.certificate
     };
 }
 
 export async function signHashes(
     { pluginCertificate, ...metadata }: SigningCertificate,
     documents: readonly SigningHashes[],
-    signal?: AbortSignal,
+    signal?: AbortSignal
 ) {
     signal?.throwIfAborted();
     const { oid } = await cryptoOperation('certificate', 'KEY_ALGORITHM_UNAVAILABLE', () =>
-        pluginCertificate.getAlgorithm(),
+        pluginCertificate.getAlgorithm()
     );
     // Проверяем всю группу до первой подписи.
-    const hashes = documents.map((document) => selectHash(oid, document));
+    const hashes = documents.map(document => selectHash(oid, document));
     signal?.throwIfAborted();
     const publicCertificate = await cryptoOperation<Certificate>(
         'certificate',
         'CERTIFICATE_EXPORT_FAILED',
         async () => ({
             ...metadata,
-            certificate_base64: readBase64(await pluginCertificate.exportBase64(), 'certificate'),
-        }),
+            certificate_base64: readBase64(await pluginCertificate.exportBase64(), 'certificate')
+        })
     );
 
     const signatures = await hashes.reduce<Promise<string[]>>(async (previous, hash) => {
@@ -179,7 +186,7 @@ export async function signHashes(
 async function signSelectedHash(
     certificate: PluginCertificate,
     hash: ReturnType<typeof selectHash>,
-    signal?: AbortSignal,
+    signal?: AbortSignal
 ) {
     const base64: unknown = await cryptoOperation('plugin', 'SIGNATURE_PREPARATION_FAILED', async () => {
         const { execute } = await import(
@@ -208,12 +215,12 @@ async function signSelectedHash(
                     await data.propset_Algorithm(
                         hash.bits === 256
                             ? cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_256
-                            : cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_512,
+                            : cadesplugin.CADESCOM_HASH_ALGORITHM_CP_GOST_3411_2012_512
                     );
                     await data.SetHashValue(hash.hex);
                     return { data, signedData, signer };
                 },
-                getLastError,
+                getLastError
             );
             signal?.throwIfAborted();
             return cryptoOperation(
@@ -221,7 +228,7 @@ async function signSelectedHash(
                 'SIGN_HASH_FAILED',
                 async () =>
                     prepared.signedData.SignHash(prepared.data, prepared.signer, cadesplugin.CADESCOM_PKCS7_TYPE),
-                getLastError,
+                getLastError
             );
         });
     });

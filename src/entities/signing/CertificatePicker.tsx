@@ -1,14 +1,19 @@
 import Select from '@sber-site/malachite-kit/esm/components/Select';
 import { useRef, useState } from 'react';
-import { toCertificateSelectValue } from './certificateList';
-import type { CertificateList, CertificateOption, CertificateSelectValue } from './certificateList';
+
+import {
+    type CertificateList,
+    type CertificateOption,
+    type CertificateSelectValue,
+    toCertificateSelectValue
+} from './certificateList';
 
 export function CertificatePicker({
     certificates,
     selected,
     onSelect,
     busy,
-    className,
+    className
 }: {
     certificates: CertificateList;
     selected?: CertificateOption;
@@ -25,11 +30,11 @@ export function CertificatePicker({
         <Select
             className={className}
             autoFocus={false}
-            name="certificate"
+            name='certificate'
             required={false}
             inputRef={ref}
-            autoComplete="none"
-            aria-label="Выберите сертификат"
+            autoComplete='none'
+            aria-label='Выберите сертификат'
             value={data.find(({ id }) => id === selected?.id)}
             disabled={busy}
             onChange={({ value }: CertificateSelectValue) => {
@@ -37,7 +42,7 @@ export function CertificatePicker({
                     onSelect(value);
                 }
             }}
-            placeholder="Выберите сертификат"
+            placeholder='Выберите сертификат'
             data={data}
         />
     );

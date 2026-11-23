@@ -4,7 +4,7 @@ export const config = {
         start: 'SETTING',
         ready: 'CHECK',
         check: 'SIGNING',
-        signing: 'STATUS_SUCCESS',
+        signing: 'STATUS_SUCCESS'
     },
     poll: 'STATUS_SUCCESS',
     // Для проверки ошибок поставьте 400, 401, 403, 429, 500, 503 или 504.
@@ -15,15 +15,15 @@ export const config = {
         check: 200,
         signing: 200,
         poll: 200,
-        document: 200,
-    },
+        document: 200
+    }
 };
 
 export const settings = {
     retry_time: 1000,
     retry_addition: 200,
     retry_count: 3,
-    pull_time: 10000,
+    pull_time: 10000
 };
 
 const back = { message: 'Назад', process: 'BACK' };
@@ -31,7 +31,7 @@ const cryptopro = {
     sign_type: 'single',
     sign_format: 'other',
     sign_position: 'detached',
-    tsp_address: 'https://example.test/tsp',
+    tsp_address: 'https://example.test/tsp'
 };
 // Синтетические хэши для проверки UI/контракта, не хэши реального документа.
 const hashes = { hash256: 'a'.repeat(64), hash512: 'b'.repeat(128) };
@@ -50,28 +50,28 @@ export const process = {
                         state: 'WAIT',
                         message: 'Расширение браузера',
                         description: 'Проверка расширения КриптоПро',
-                        text_button: 'Подробнее',
+                        text_button: 'Подробнее'
                     },
                     {
                         name: 'program',
                         state: 'WAIT',
                         message: 'КриптоПро CSP',
                         description: 'Требуется версия 5.0 или выше',
-                        text_button: 'Подробнее',
+                        text_button: 'Подробнее'
                     },
                     {
                         name: 'certificate',
                         state: 'WAIT',
                         message: 'Сертификат электронной подписи',
                         description: 'Проверка действующих сертификатов',
-                        text_button: 'Подробнее',
-                    },
-                ],
+                        text_button: 'Подробнее'
+                    }
+                ]
             },
             buttons: {
-                accent: { message: 'Запустить проверку', process: 'SETTING' },
-            },
-        },
+                accent: { message: 'Запустить проверку', process: 'SETTING' }
+            }
+        }
     },
     CHECK: {
         process: 'CHECK',
@@ -81,15 +81,15 @@ export const process = {
             consent: {
                 text: 'Нажимая кнопку, вы принимаете условия проверки электронной подписи',
                 hypertext: 'условия проверки электронной подписи',
-                url: 'https://example.test/consent',
+                url: 'https://example.test/consent'
             },
             test_document: { format: 'txt', ...hashes },
             buttons: {
                 accent: { message: 'Подписать', process: 'CHECK' },
-                secondary: back,
-            },
+                secondary: back
+            }
         },
-        cryptopro,
+        cryptopro
     },
     SIGNING: {
         process: 'SIGNING',
@@ -101,15 +101,15 @@ export const process = {
             lists: {
                 documents: [
                     { id: 'doc-1', title: 'Заявление', format: 'txt', ...hashes },
-                    { id: 'doc-2', title: 'Согласие', format: 'txt', ...hashes },
-                ],
+                    { id: 'doc-2', title: 'Согласие', format: 'txt', ...hashes }
+                ]
             },
             buttons: {
                 accent: { message: 'Подписать', process: 'SIGNING' },
-                secondary: back,
-            },
+                secondary: back
+            }
         },
-        cryptopro,
+        cryptopro
     },
     STATUS_SUCCESS: {
         process: 'STATUS',
@@ -117,8 +117,8 @@ export const process = {
             level: 'SUCCESS',
             title: 'Документы подписаны',
             message: 'Подписание успешно завершено',
-            buttons: { accent: back },
-        },
+            buttons: { accent: back }
+        }
     },
     STATUS_WARNING: {
         process: 'STATUS',
@@ -126,8 +126,8 @@ export const process = {
             level: 'WARNING',
             title: 'Требуется внимание',
             message: 'Проверьте данные и повторите попытку',
-            buttons: { accent: back },
-        },
+            buttons: { accent: back }
+        }
     },
     STATUS_ERROR: {
         process: 'STATUS',
@@ -135,8 +135,8 @@ export const process = {
             level: 'ERROR',
             title: 'Не удалось подписать документы',
             message: 'Повторите попытку позже',
-            buttons: { accent: back },
-        },
+            buttons: { accent: back }
+        }
     },
     STATUS_TIMER: {
         process: 'STATUS',
@@ -148,31 +148,31 @@ export const process = {
             buttons: {
                 accent: {
                     message: 'Продолжить',
-                    url: 'https://example.test/next-process',
+                    url: 'https://example.test/next-process'
                 },
-                secondary: back,
-            },
-        },
+                secondary: back
+            }
+        }
     },
     TASK: { task: 'mock-task' },
-    INVALID_RESPONSE: { process: 'UNKNOWN' },
+    INVALID_RESPONSE: { process: 'UNKNOWN' }
 };
 
 // Варианты ответа без списка проверок, с одним документом и вне режима MVP.
 process.SETTING_EMPTY = {
     ...process.SETTING,
-    screen: { ...process.SETTING.screen, lists: { testing: [] } },
+    screen: { ...process.SETTING.screen, lists: { testing: [] } }
 };
 process.SIGNING_SINGLE = {
     ...process.SIGNING,
     screen: {
         ...process.SIGNING.screen,
-        lists: { documents: [process.SIGNING.screen.lists.documents[0]] },
-    },
+        lists: { documents: [process.SIGNING.screen.lists.documents[0]] }
+    }
 };
 process.SIGNING_BATCH = {
     ...process.SIGNING,
-    cryptopro: { ...cryptopro, sign_type: 'batch' },
+    cryptopro: { ...cryptopro, sign_type: 'batch' }
 };
 process.SIGNING_ARCHIVED = {
     ...process.SIGNING,
@@ -180,32 +180,32 @@ process.SIGNING_ARCHIVED = {
         ...cryptopro,
         sign_type: 'archived',
         hash256_archived: hashes.hash256,
-        hash512_archived: hashes.hash512,
-    },
+        hash512_archived: hashes.hash512
+    }
 };
 process.SIGNING_XML = {
     ...process.SIGNING,
-    cryptopro: { ...cryptopro, sign_format: 'xml' },
+    cryptopro: { ...cryptopro, sign_format: 'xml' }
 };
 process.SIGNING_ATTACHED = {
     ...process.SIGNING,
-    cryptopro: { ...cryptopro, sign_position: 'attached' },
+    cryptopro: { ...cryptopro, sign_position: 'attached' }
 };
 process.CHECK_BATCH = {
     ...process.CHECK,
-    cryptopro: { ...cryptopro, sign_type: 'batch' },
+    cryptopro: { ...cryptopro, sign_type: 'batch' }
 };
 process.CHECK_ARCHIVED = {
     ...process.CHECK,
-    cryptopro: { ...process.SIGNING_ARCHIVED.cryptopro },
+    cryptopro: { ...process.SIGNING_ARCHIVED.cryptopro }
 };
 process.CHECK_XML = {
     ...process.CHECK,
-    cryptopro: { ...cryptopro, sign_format: 'xml' },
+    cryptopro: { ...cryptopro, sign_format: 'xml' }
 };
 process.CHECK_ATTACHED = {
     ...process.CHECK,
-    cryptopro: { ...cryptopro, sign_position: 'attached' },
+    cryptopro: { ...cryptopro, sign_position: 'attached' }
 };
 
 // GET справочника по любому ключу ошибки возвращает один постоянный экран.
@@ -215,5 +215,5 @@ export const errorScreen = process.STATUS_WARNING;
 export const document = {
     title: 'Моковый документ',
     format: 'txt',
-    base64: 'U0lHTklORyBtb2NrIGRvY3VtZW50Lgo=',
+    base64: 'U0lHTklORyBtb2NrIGRvY3VtZW50Lgo='
 };

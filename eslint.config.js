@@ -4,7 +4,10 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+import arrowParens from './eslint/arrow-parens.mjs';
 import fsd from './eslint/fsd.mjs';
+import importGroups from './eslint/import-groups.mjs';
 
 export default defineConfig(
     globalIgnores([
@@ -19,28 +22,36 @@ export default defineConfig(
         '**/*.test.ts',
         '**/__tests__/',
         'jest.config.js',
-        'mock-server.mjs',
+        'mock-server.mjs'
     ]),
     js.configs.recommended,
     tseslint.configs.recommended,
     {
         files: ['src/**/*.{js,jsx,ts,tsx}'],
         extends: [reactHooks.configs.flat.recommended],
-        languageOptions: { globals: globals.browser },
+        languageOptions: { globals: globals.browser }
     },
     {
         files: ['*.config.{js,ts}'],
-        languageOptions: { globals: globals.node },
+        languageOptions: { globals: globals.node }
     },
     prettier,
     {
         files: ['src/**/*.{ts,tsx}'],
         ignores: ['src/**/*.test.ts', 'src/**/__tests__/**'],
         plugins: { fsd },
-        rules: { 'fsd/import-boundaries': 'error' },
+        rules: { 'fsd/import-boundaries': 'error' }
     },
     {
+        plugins: { local: { rules: { 'arrow-parens': arrowParens, 'import-groups': importGroups } } },
         rules: {
+            quotes: ['error', 'single', { avoidEscape: true }],
+            'jsx-quotes': ['error', 'prefer-single'],
+            'comma-dangle': ['error', 'never'],
+            'local/arrow-parens': 'error',
+            'sort-imports': ['error', { ignoreCase: true, ignoreDeclarationSort: true }],
+            'local/import-groups': 'error',
+            'no-duplicate-imports': 'error',
             'no-shadow': 'off',
             '@typescript-eslint/no-shadow': 'error',
             'no-bitwise': 'error',
@@ -55,29 +66,29 @@ export default defineConfig(
                 'error',
                 {
                     selector: 'ForOfStatement',
-                    message: 'Use array methods or sequential promise operations instead of for…of.',
+                    message: 'Use array methods or sequential promise operations instead of for…of.'
                 },
                 {
                     selector: 'ForInStatement',
-                    message: 'Use Object.keys/values/entries and array methods instead of for…in.',
+                    message: 'Use Object.keys/values/entries and array methods instead of for…in.'
                 },
                 {
                     selector: 'ForStatement',
-                    message: 'Use array methods instead of for loops.',
+                    message: 'Use array methods instead of for loops.'
                 },
                 {
                     selector: 'WhileStatement',
-                    message: 'Use array methods or asynchronous continuation instead of while loops.',
+                    message: 'Use array methods or asynchronous continuation instead of while loops.'
                 },
                 {
                     selector: 'DoWhileStatement',
-                    message: 'Use array methods or asynchronous continuation instead of do…while loops.',
+                    message: 'Use array methods or asynchronous continuation instead of do…while loops.'
                 },
                 {
                     selector: ':function[generator=true]',
-                    message: 'Generators require regenerator-runtime in the target environment.',
-                },
-            ],
-        },
-    },
+                    message: 'Generators require regenerator-runtime in the target environment.'
+                }
+            ]
+        }
+    }
 );

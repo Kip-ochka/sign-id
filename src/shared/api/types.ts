@@ -47,7 +47,7 @@ export type {
     StatusLevel,
     StatusScreen,
     TaskResponse,
-    TestDocument,
+    TestDocument
 } from './schemas';
 
 export type DocumentRequestBody = z.infer<typeof documentRequestSchema>;

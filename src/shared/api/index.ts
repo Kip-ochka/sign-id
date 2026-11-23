@@ -42,7 +42,7 @@ export {
     statusLevelSchema,
     statusScreenSchema,
     taskResponseSchema,
-    testDocumentSchema,
+    testDocumentSchema
 } from './schemas';
 export type {
     Base64,
@@ -88,7 +88,7 @@ export type {
     StatusLevel,
     StatusScreen,
     TaskResponse,
-    TestDocument,
+    TestDocument
 } from './types';
 
 export { parseDocumentResponse } from './helpers/parseDocumentResponse';

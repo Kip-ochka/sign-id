@@ -1,5 +1,10 @@
-import { localFallback } from '../../shared/api';
-import type { ProcessResponse, SettingsResponse, StatusScreen, TaskResponse } from '../../shared/api';
+import {
+    localFallback,
+    type ProcessResponse,
+    type SettingsResponse,
+    type StatusScreen,
+    type TaskResponse
+} from '../../shared/api';
 import type { SigningCertificate } from '../../shared/services/cryptoPro/adapter';
 
 export const settingStages = ['extension', 'program', 'certificate'] as const;
@@ -10,7 +15,7 @@ export const defaultSettings: SettingsResponse = {
     retry_time: 1000,
     retry_addition: 200,
     retry_count: 3,
-    pull_time: 10000,
+    pull_time: 10000
 };
 
 type WorkScreen = Exclude<ProcessResponse, StatusScreen>;
@@ -49,7 +54,7 @@ export const initialState = (inquiryId: string): ProcessState => ({
     inquiryId,
     settings: defaultSettings,
     screen: { process: 'START' },
-    busy: false,
+    busy: false
 });
 
 // Запоминает валидный ответ и обновляет session или token для соответствующего шага.
@@ -63,7 +68,7 @@ export function saveResponse(state: ProcessState, response: ProcessResponse | Ta
         serverProcess: response.process,
         task: undefined,
         session: response.process === 'SETTING' ? response.session : state.session,
-        token: response.process === 'SIGNING' ? response.token : state.token,
+        token: response.process === 'SIGNING' ? response.token : state.token
     };
 }
 
@@ -72,7 +77,7 @@ export function showScreen(
     state: ProcessState,
     screen: DisplayScreen,
     requestId?: string,
-    errorKey?: string,
+    errorKey?: string
 ): ProcessState {
     const workScreen = screen.process === 'SETTING' || screen.process === 'CHECK' || screen.process === 'SIGNING';
     return {
@@ -84,7 +89,7 @@ export function showScreen(
         signaturePhase: undefined,
         task: screen.process === 'WAITING' ? state.task : undefined,
         requestId,
-        errorKey,
+        errorKey
     };
 }
 
@@ -97,6 +102,6 @@ export function resetProcess(previous: ProcessState, screen = initialState(previ
     return {
         ...showScreen({ ...next, screen: previous.screen }, screen),
         session: previous.session === null ? null : undefined,
-        busy,
+        busy
     };
 }

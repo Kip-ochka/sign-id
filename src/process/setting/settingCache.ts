@@ -10,7 +10,7 @@ export interface SettingCache {
 
 export function createSettingCache(
     getDevice?: () => string | undefined,
-    getStorage: () => Pick<Storage, 'getItem' | 'setItem'> = () => window.localStorage,
+    getStorage: () => Pick<Storage, 'getItem' | 'setItem'> = () => window.localStorage
 ): SettingCache {
     return {
         has(inquiryId) {
@@ -51,7 +51,7 @@ export function createSettingCache(
                     return false;
                 }
                 const checkedStages = entry.stages;
-                return Array.isArray(checkedStages) && settingStages.every((stage) => checkedStages.includes(stage));
+                return Array.isArray(checkedStages) && settingStages.every(stage => checkedStages.includes(stage));
             } catch {
                 return false;
             }
@@ -69,12 +69,12 @@ export function createSettingCache(
                         inquiry_id: inquiryId,
                         device,
                         checked_at: Date.now(),
-                        stages: settingStages,
-                    }),
+                        stages: settingStages
+                    })
                 );
             } catch {
                 // Успех текущей проверки не зависит от записи в localStorage.
             }
-        },
+        }
     };
 }

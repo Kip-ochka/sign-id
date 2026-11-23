@@ -1,16 +1,21 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
-import { sessionStorage } from '../../entities/signing';
-import { resetProcess, showFallback } from '../../entities/signing';
-import type { ProcessState } from '../../entities/signing';
-import { ProcessRequestError } from '../../entities/signing';
-import type { RequestOptions } from '../../entities/signing';
-import type { UpdateProcess, ShowError } from '../../entities/signing';
+
+import {
+    ProcessRequestError,
+    type ProcessState,
+    type RequestOptions,
+    resetProcess,
+    sessionStorage,
+    type ShowError,
+    showFallback,
+    type UpdateProcess
+} from '../../entities/signing';
 
 export function useOperation(
     state: ProcessState,
     setState: UpdateProcess,
     handleStart: (options: RequestOptions) => Promise<void>,
-    showError: ShowError,
+    showError: ShowError
 ) {
     const { inquiryId } = state;
     const activeRequest = useRef<AbortController>();
@@ -58,11 +63,11 @@ export function useOperation(
                     }
                     options.setSession(null);
                     options.token = undefined;
-                    setState((previous) => ({ ...previous, session: null }));
-                },
+                    setState(previous => ({ ...previous, session: null }));
+                }
             };
             activeRequest.current = controller;
-            setState((previous) => ({ ...previous, busy: true }));
+            setState(previous => ({ ...previous, busy: true }));
             async function executeRequest(request: (options: RequestOptions) => Promise<T | void>): Promise<T | void> {
                 if (signal.aborted) {
                     return undefined;
@@ -81,7 +86,7 @@ export function useOperation(
                         return undefined;
                     }
                     if (error.unauthorized) {
-                        setState((previous) => resetProcess(previous, { process: 'START' }, true));
+                        setState(previous => resetProcess(previous, { process: 'START' }, true));
                         return executeRequest(handleStart);
                     }
                     await showError(error.key, options, error.requestId);
@@ -94,15 +99,15 @@ export function useOperation(
             } finally {
                 if (activeRequest.current === controller) {
                     activeRequest.current = undefined;
-                    setState((previous) => ({
+                    setState(previous => ({
                         ...previous,
                         busy: false,
-                        signaturePhase: undefined,
+                        signaturePhase: undefined
                     }));
                 }
             }
         },
-        [handleStart, inquiryId, showError, state.session, state.settings, state.token, setState],
+        [handleStart, inquiryId, showError, state.session, state.settings, state.token, setState]
     );
 
     return { run, stop };

@@ -4,7 +4,7 @@ export const sessionTtl = 115 * 60 * 1000;
 type SessionEntry = { id: string; expiresAt: number };
 
 export function createSessionStorage(
-    getStorage: () => Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> = () => window.localStorage,
+    getStorage: () => Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> = () => window.localStorage
 ) {
     let memory: SessionEntry | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;

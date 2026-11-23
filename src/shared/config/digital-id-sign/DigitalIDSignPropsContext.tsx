@@ -1,5 +1,4 @@
-import { createContext, useContext } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 
 export type DigitalIDSignProps = Record<string, never>;
 

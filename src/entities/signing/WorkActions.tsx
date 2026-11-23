@@ -1,5 +1,6 @@
 import Button from '@sber-site/malachite-kit/esm/components/Button';
 import { Link } from '@sber-site/malachite-kit';
+
 import type { ScreenButtons } from '../../shared/api';
 import { httpUrl } from '../../shared/lib/httpUrl';
 import { ActionGroup } from '../../shared/ui/ActionGroup';
@@ -8,7 +9,7 @@ export function WorkActions({
     busy,
     loading = false,
     onAction,
-    className,
+    className
 }: {
     buttons: ScreenButtons;
     busy: boolean;
@@ -21,9 +22,9 @@ export function WorkActions({
     return (
         <ActionGroup className={className}>
             <Button
-                type="button"
-                theme="primary"
-                size="large"
+                type='button'
+                theme='primary'
+                size='large'
                 disabled={!loading && (busy || !onAction)}
                 loading={loading}
                 onClick={onAction}
@@ -32,11 +33,11 @@ export function WorkActions({
             </Button>
             {secondary &&
                 (url && !busy ? (
-                    <Link theme="secondary" href={url} target="_blank" rel="noopener noreferrer">
+                    <Link theme='secondary' href={url} target='_blank' rel='noopener noreferrer'>
                         {secondary.message}
                     </Link>
                 ) : (
-                    <Button type="button" theme="secondary" size="large" disabled>
+                    <Button type='button' theme='secondary' size='large' disabled>
                         {secondary.message}
                     </Button>
                 ))}

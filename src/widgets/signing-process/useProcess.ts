@@ -1,11 +1,15 @@
 import { useCallback, useState } from 'react';
-import { initialState, resetProcess, showScreen, showFallback } from '../../entities/signing';
-import type { ProcessState } from '../../entities/signing';
-import { sessionStorage } from '../../entities/signing';
-import type { RequestOptions } from '../../entities/signing';
-import { createSettingCache } from '../../process/setting';
-import type { SettingCache } from '../../process/setting';
-import { createSettingActions } from '../../process/setting';
+
+import {
+    initialState,
+    type ProcessState,
+    type RequestOptions,
+    resetProcess,
+    sessionStorage,
+    showFallback,
+    showScreen
+} from '../../entities/signing';
+import { createSettingActions, createSettingCache, type SettingCache } from '../../process/setting';
 import { start as requestStart } from '../../process/start';
 import { createDocumentActions } from '../../process/documents';
 import { useProcessErrors } from '../../process/status';
@@ -15,26 +19,24 @@ import { useOperation } from './useOperation';
 import { useSignatureActions } from './useSignatureActions';
 
 const defaultSettingCache = createSettingCache(() =>
-    typeof window === 'undefined' ? undefined : window.navigator.userAgent,
+    typeof window === 'undefined' ? undefined : window.navigator.userAgent
 );
 
 // Композиция фичей; состояние заявки остаётся в React и доступно через Context.
 export function useProcess(inquiryId: string, settingCache: SettingCache = defaultSettingCache) {
     const [state, setState] = useState<ProcessState>(() => ({
         ...initialState(inquiryId),
-        session: sessionStorage.read(),
+        session: sessionStorage.read()
     }));
     useSessionExpiry(state, setState);
     const { showError, showSetupError } = useProcessErrors(setState);
     const { applyResponse, openSignatureScreen } = useResponse(inquiryId, settingCache, setState, showSetupError);
     const handleStart = useCallback(
         async (options: RequestOptions) => {
-            const reply = await requestStart(options, (settings) =>
-                setState((previous) => ({ ...previous, settings })),
-            );
+            const reply = await requestStart(options, settings => setState(previous => ({ ...previous, settings })));
             await applyResponse(reply, options);
         },
-        [applyResponse],
+        [applyResponse]
     );
     const { run, stop } = useOperation(state, setState, handleStart, showError);
     const setting = createSettingActions({
@@ -43,7 +45,7 @@ export function useProcess(inquiryId: string, settingCache: SettingCache = defau
         run,
         applyResponse,
         showSetupError,
-        settingCache,
+        settingCache
     });
     const signature = useSignatureActions(state, setState, run, applyResponse, showError);
     const documents = createDocumentActions(state, run);
@@ -68,15 +70,15 @@ export function useProcess(inquiryId: string, settingCache: SettingCache = defau
         }
         stop();
         if (backScreen.process === 'CHECK' || backScreen.process === 'SIGNING') {
-            return run((options) => openSignatureScreen(backScreen, options));
+            return run(options => openSignatureScreen(backScreen, options));
         }
-        setState((previous) => showScreen({ ...previous, busy: false }, backScreen));
+        setState(previous => showScreen({ ...previous, busy: false }, backScreen));
         return undefined;
     }, [backScreen, openSignatureScreen, restart, run, stop]);
 
     const recoverFromRenderError = () => {
         stop();
-        setState((previous) => showFallback({ ...previous, busy: false }));
+        setState(previous => showFallback({ ...previous, busy: false }));
     };
 
     return {
@@ -87,7 +89,7 @@ export function useProcess(inquiryId: string, settingCache: SettingCache = defau
             ...setting,
             ...signature,
             ...documents,
-            recoverFromRenderError,
-        },
+            recoverFromRenderError
+        }
     };
 }

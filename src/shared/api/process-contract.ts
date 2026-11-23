@@ -11,22 +11,22 @@ export const localFallback = {
         title: 'Что-то пошло не так',
         message: 'Пожалуйста, попробуйте повторить попытку позже',
         buttons: {
-            accent: { message: 'Попробовать снова', process: 'BACK' },
-        },
-    },
+            accent: { message: 'Попробовать снова', process: 'BACK' }
+        }
+    }
 } satisfies StatusScreen;
 
 const processResultSchema = unambiguousResponseSchema.pipe(
     z.union([
-        taskResponseSchema.transform((response) => ({
+        taskResponseSchema.transform(response => ({
             kind: 'task' as const,
-            response,
+            response
         })),
-        processResponseSchema.transform((response) => ({
+        processResponseSchema.transform(response => ({
             kind: 'process' as const,
-            response,
-        })),
-    ]),
+            response
+        }))
+    ])
 );
 
 // Общая граница сценария для тела state и pollStatus после проверки HTTP-статуса.

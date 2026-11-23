@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from 'react';
+
 import './Text.css';
 type Props = HTMLAttributes<HTMLElement> & {
     tag?: 'p' | 'span' | 'div';

@@ -67,6 +67,7 @@
 
 @media (min-width: 768px) {
     .sign_signing {
+        box-sizing: content-box;
         max-width: 420px;
     }
 

@@ -1,5 +1,5 @@
-import { forwardRef } from 'react';
-import type { HTMLAttributes } from 'react';
+import { forwardRef, type HTMLAttributes } from 'react';
+
 import './Heading.css';
 type Props = HTMLAttributes<HTMLHeadingElement> & {
     size?: 'h2' | 'h3';
@@ -7,7 +7,7 @@ type Props = HTMLAttributes<HTMLHeadingElement> & {
 };
 export default forwardRef<HTMLHeadingElement, Props>(function Heading(
     { tag: Tag = 'h2', size = 'h2', className = '', ...props },
-    ref,
+    ref
 ) {
     return (
         <Tag

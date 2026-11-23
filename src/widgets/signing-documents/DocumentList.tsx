@@ -1,11 +1,12 @@
 import type { SigningDocument } from '../../shared/api';
 import { DocumentLink } from '../../shared/ui/DocumentLink';
+
 import * as css from './DocumentList.css';
 export function DocumentList({
     documents,
     blocked,
     pendingDocumentId,
-    onOpenDocument,
+    onOpenDocument
 }: {
     documents: SigningDocument[];
     blocked: boolean;
@@ -14,7 +15,7 @@ export function DocumentList({
 }) {
     useStyles(css);
     return (
-        <div className="sign_signing__document-wrapper" aria-label="Документы">
+        <div className='sign_signing__document-wrapper' aria-label='Документы'>
             {documents.map(({ id, title, format }) => {
                 const normalized = format.toUpperCase().replace(/^\./, '');
                 let kind: 'DOC' | 'PDF' | 'OTHER' = 'OTHER';

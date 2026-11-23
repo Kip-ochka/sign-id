@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+
 import './Button.css';
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
     theme?: 'primary' | 'secondary';
@@ -24,7 +25,7 @@ export default function Button({
                 'digital_id_sign_kit_button',
                 `digital_id_sign_kit_${theme}`,
                 `digital_id_sign_kit_${size}`,
-                className,
+                className
             ].join(' ')}
         />
     );

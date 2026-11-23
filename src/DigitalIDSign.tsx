@@ -1,12 +1,12 @@
 import { useState } from 'react';
+
 import { readInquiryId } from './shared/readInquiryId';
-import { DigitalIDSignPropsProvider } from './shared/config/digital-id-sign';
-import type { DigitalIDSignProps } from './shared/config/digital-id-sign';
+import { type DigitalIDSignProps, DigitalIDSignPropsProvider } from './shared/config/digital-id-sign';
 import {
     NavigationProvider,
     ProcessProvider,
     useSigningNavigation,
-    useSigningProcess,
+    useSigningProcess
 } from './widgets/signing-process';
 import { ProcessErrorBoundary } from './app/ProcessErrorBoundary';
 import { CheckScreen } from './screens/check';

@@ -1,28 +1,33 @@
 import { useCallback } from 'react';
-import { saveResponse, showScreen } from '../../entities/signing';
-import { sessionStorage } from '../../entities/signing';
-import { requestReady } from '../../entities/signing';
-import type { ProcessReply, RequestOptions } from '../../entities/signing';
-import type { UpdateProcess, ShowSetupError } from '../../entities/signing';
+
+import {
+    type ProcessReply,
+    type RequestOptions,
+    requestReady,
+    saveResponse,
+    sessionStorage,
+    showScreen,
+    type ShowSetupError,
+    type UpdateProcess
+} from '../../entities/signing';
 import type { CheckScreen, SigningScreen } from '../../shared/api';
 import { findCertificates } from '../../shared/services/cryptoPro/adapter';
 import { checkBrowserPlugin } from '../../shared/services/cryptoPro/workplace';
 import { getCryptoErrorCode } from '../../shared/lib/cryptoErrors';
-import { checkCsp } from '../../process/setting';
-import type { SettingCache } from '../../process/setting';
+import { checkCsp, type SettingCache } from '../../process/setting';
 import { pollUntilProcess } from '../../process/polling';
 
 export function useResponse(
     inquiryId: string,
     settingCache: SettingCache,
     setState: UpdateProcess,
-    showSetupError: ShowSetupError,
+    showSetupError: ShowSetupError
 ) {
     // Вход и BACK всегда загружают актуальную выборку сертификатов.
     const openSignatureScreen = useCallback(
         async (screen: CheckScreen | SigningScreen, options: RequestOptions) => {
             const { signal } = options;
-            setState((previous) => showScreen(previous, screen));
+            setState(previous => showScreen(previous, screen));
             try {
                 signal.throwIfAborted();
                 await checkBrowserPlugin();
@@ -36,13 +41,13 @@ export function useResponse(
                 if (!signatureCertificates.length) {
                     return showSetupError('NO_CERT', options);
                 }
-                setState((previous) => ({ ...previous, signatureCertificates }));
+                setState(previous => ({ ...previous, signatureCertificates }));
             } catch (error) {
                 await showSetupError(getCryptoErrorCode(error), options);
             }
             return undefined;
         },
-        [showSetupError, setState],
+        [showSetupError, setState]
     );
 
     // Ответ с task запускает polling. Ответ с process определяет следующий экран.
@@ -57,14 +62,14 @@ export function useResponse(
                 const next = await pollUntilProcess(
                     data.response,
                     options,
-                    (task) => setState((previous) => saveResponse(previous, task)),
-                    () => setState((previous) => showScreen(previous, { process: 'WAITING' })),
+                    task => setState(previous => saveResponse(previous, task)),
+                    () => setState(previous => showScreen(previous, { process: 'WAITING' }))
                 );
                 return applyReply(next, options);
             }
             const screen = data.response;
             if (screen.process === 'CHECK' || screen.process === 'SIGNING') {
-                setState((previous) => saveResponse(previous, screen));
+                setState(previous => saveResponse(previous, screen));
                 await openSignatureScreen(screen, options);
                 return undefined;
             }
@@ -73,10 +78,10 @@ export function useResponse(
                 sessionStorage.save(screen.session);
                 options.setSession(screen.session);
                 // Сохраняем session, оставляя текущий экран до решения по кэшу.
-                setState((previous) => ({
+                setState(previous => ({
                     ...saveResponse(previous, screen),
                     settingProgress: undefined,
-                    workplaceCertificates: undefined,
+                    workplaceCertificates: undefined
                 }));
                 let cached = false;
                 try {
@@ -93,10 +98,10 @@ export function useResponse(
 
             const errorRequestId =
                 screen.process === 'STATUS' && screen.screen.level !== 'SUCCESS' ? requestId : undefined;
-            setState((previous) => showScreen(saveResponse(previous, screen), screen, errorRequestId));
+            setState(previous => showScreen(saveResponse(previous, screen), screen, errorRequestId));
             return undefined;
         },
-        [inquiryId, openSignatureScreen, settingCache, setState],
+        [inquiryId, openSignatureScreen, settingCache, setState]
     );
 
     return { applyResponse, openSignatureScreen };

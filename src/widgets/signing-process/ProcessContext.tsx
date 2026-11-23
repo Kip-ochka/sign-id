@@ -1,5 +1,4 @@
-import { createContext, useContext, useEffect } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useEffect } from 'react';
 
 import { useProcess } from './useProcess';
 

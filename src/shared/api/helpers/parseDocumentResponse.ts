@@ -3,7 +3,7 @@ import type { DocumentData } from '../types';
 
 export const parseDocumentResponse = async (
     body: ArrayBuffer,
-    contentType: string | null | undefined,
+    contentType: string | null | undefined
 ): Promise<DocumentData> => {
     const mixedType = /^multipart\/mixed(?=\s*;)/i;
 
@@ -14,8 +14,8 @@ export const parseDocumentResponse = async (
     // formData() не принимает multipart/mixed — подменяем подтип, boundary сохраняем.
     const parts = await new Response(body, {
         headers: {
-            'Content-Type': contentType.replace(mixedType, 'multipart/form-data'),
-        },
+            'Content-Type': contentType.replace(mixedType, 'multipart/form-data')
+        }
     }).formData();
 
     const jsonPart = parts.get('response');
@@ -32,7 +32,7 @@ export const parseDocumentResponse = async (
     const base64 = typeof filePart === 'string' ? filePart : await filePart.text();
     const metadata: unknown = JSON.parse(jsonText);
     const parsed = documentDataSchema.safeParse(
-        typeof metadata === 'object' && metadata !== null ? { ...metadata, base64 } : undefined,
+        typeof metadata === 'object' && metadata !== null ? { ...metadata, base64 } : undefined
     );
 
     if (!parsed.success) {

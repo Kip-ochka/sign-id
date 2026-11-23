@@ -7,18 +7,18 @@ export const screenButtonActionSchema = z.union([
     z.object({
         message: z.string(),
         url: z.string(),
-        process: z.string().optional(),
+        process: z.string().optional()
     }),
     z.object({
         message: z.string(),
         process: z.string(),
-        url: z.string().optional(),
-    }),
+        url: z.string().optional()
+    })
 ]);
 
 export const screenButtonsSchema = z.object({
     accent: screenButtonActionSchema,
-    secondary: screenButtonActionSchema.optional(),
+    secondary: screenButtonActionSchema.optional()
 });
 
 // --- Сертификат: данные достаются из самого сертификата, type всегда хардкодим.
@@ -28,19 +28,19 @@ export const personSchema = z.object({
     first_name: z.string(),
     middle_name: z.string(),
     inn: z.string(),
-    snils: z.string(),
+    snils: z.string()
 });
 
 export const organizationSchema = z.object({
     name: z.string(),
     inn: z.string(),
-    ogrn: z.string(),
+    ogrn: z.string()
 });
 
 export const issuerSchema = z.object({
     name: z.string(),
     inn: z.string(),
-    ogrn: z.string(),
+    ogrn: z.string()
 });
 
 export const certificateSchema = z.object({
@@ -51,7 +51,7 @@ export const certificateSchema = z.object({
     certificate_base64: z.string(), // содержимое <serial_number>.b64, без PEM-заголовков
     person: personSchema.partial().optional(),
     organization: organizationSchema.partial().optional(),
-    issuer: issuerSchema.partial().optional(),
+    issuer: issuerSchema.partial().optional()
 });
 
 // --- cryptopro: фильтры поиска — любое поле и любой вложенный объект может отсутствовать,
@@ -59,7 +59,7 @@ export const certificateSchema = z.object({
 export const certificateFiltersSchema = z.object({
     person: personSchema.partial().optional(),
     organization: organizationSchema.partial().optional(),
-    issuer: issuerSchema.partial().optional(),
+    issuer: issuerSchema.partial().optional()
 });
 
 export const cryptoproSchema = z.object({
@@ -70,28 +70,28 @@ export const cryptoproSchema = z.object({
     sign_position: z.string(),
     hash256_archived: hash256Schema.optional(),
     hash512_archived: hash512Schema.optional(),
-    filters: certificateFiltersSchema.optional(),
+    filters: certificateFiltersSchema.optional()
 });
 
 const cryptoproSigningSchema = cryptoproSchema.extend({
-    tsp_address: z.string().trim().min(1),
+    tsp_address: z.string().trim().min(1)
 });
 
 // В ответе SETTING приходят только фильтры, без остальных параметров подписи.
 export const cryptoproFiltersOnlySchema = z.object({
-    filters: certificateFiltersSchema.optional(),
+    filters: certificateFiltersSchema.optional()
 });
 
 export const testDocumentSchema = z.object({
     format: z.string(),
     hash256: hash256Schema,
-    hash512: hash512Schema,
+    hash512: hash512Schema
 });
 
 export const consentSchema = z.object({
     text: z.string(),
     hypertext: z.string(),
-    url: z.string(),
+    url: z.string()
 });
 
 // --- SETTING
@@ -102,7 +102,7 @@ export const settingListSchema = z.object({
     state: settingItemStateSchema,
     message: z.string(),
     description: z.string(),
-    text_button: z.string(),
+    text_button: z.string()
 });
 
 export const settingScreenSchema = z.object({
@@ -112,9 +112,9 @@ export const settingScreenSchema = z.object({
         title: z.string(),
         message: z.string(),
         lists: z.object({ testing: z.array(settingListSchema).optional() }).optional(),
-        buttons: screenButtonsSchema,
+        buttons: screenButtonsSchema
     }),
-    cryptopro: cryptoproFiltersOnlySchema.optional(),
+    cryptopro: cryptoproFiltersOnlySchema.optional()
 });
 
 // --- CHECK
@@ -125,9 +125,9 @@ export const checkScreenSchema = z.object({
         message: z.string(),
         consent: consentSchema,
         test_document: testDocumentSchema,
-        buttons: screenButtonsSchema,
+        buttons: screenButtonsSchema
     }),
-    cryptopro: cryptoproSigningSchema,
+    cryptopro: cryptoproSigningSchema
 });
 
 // --- SIGNING
@@ -136,7 +136,7 @@ export const signingDocumentSchema = z.object({
     format: z.string(),
     title: z.string(),
     hash256: hash256Schema,
-    hash512: hash512Schema,
+    hash512: hash512Schema
 });
 
 export const signingScreenSchema = z.object({
@@ -150,14 +150,14 @@ export const signingScreenSchema = z.object({
             documents: z
                 .array(signingDocumentSchema)
                 .nonempty()
-                .refine((documents) => {
+                .refine(documents => {
                     const ids = documents.map(({ id }) => id);
-                    return ids.every((id) => id.trim().length > 0) && new Set(ids).size === ids.length;
-                }, 'Документам нужны уникальные непустые id'),
+                    return ids.every(id => id.trim().length > 0) && new Set(ids).size === ids.length;
+                }, 'Документам нужны уникальные непустые id')
         }),
-        buttons: screenButtonsSchema,
+        buttons: screenButtonsSchema
     }),
-    cryptopro: cryptoproSigningSchema,
+    cryptopro: cryptoproSigningSchema
 });
 
 // --- STATUS: ERROR сейчас не используется, но может прийти.
@@ -170,8 +170,8 @@ export const statusScreenSchema = z.object({
         level: statusLevelSchema,
         title: z.string(),
         message: z.string(),
-        buttons: screenButtonsSchema,
-    }),
+        buttons: screenButtonsSchema
+    })
 });
 
 // Ответ state/{event} и poll/status, который пришёл с процессом: дискриминант — process.
@@ -179,7 +179,7 @@ export const processResponseSchema = z.discriminatedUnion('process', [
     settingScreenSchema,
     checkScreenSchema,
     signingScreenSchema,
-    statusScreenSchema,
+    statusScreenSchema
 ]);
 
 export type ScreenButtonAction = z.infer<typeof screenButtonActionSchema>;

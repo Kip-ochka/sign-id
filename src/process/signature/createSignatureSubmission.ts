@@ -1,13 +1,15 @@
-import type {
-    ProcessState,
-    UpdateProcess,
-    RunOperation,
-    ApplyResponse,
-    ShowError,
-    SignedEvent,
-    RequestOptions,
+import {
+    type ApplyResponse,
+    type ProcessState,
+    requestCheck,
+    type RequestOptions,
+    requestSigning,
+    type RunOperation,
+    type ShowError,
+    showFallback,
+    type SignedEvent,
+    type UpdateProcess
 } from '../../entities/signing';
-import { showFallback, requestCheck, requestSigning } from '../../entities/signing';
 import { getCryptoErrorCode, getCryptoErrorKey } from '../../shared/lib/cryptoErrors';
 import { CryptoProError } from '../../shared/services/cryptoPro/error';
 
@@ -16,7 +18,7 @@ export function createSignatureSubmission(
     setState: UpdateProcess,
     run: RunOperation,
     applyResponse: ApplyResponse,
-    showError: ShowError,
+    showError: ShowError
 ) {
     async function handleCheck(signed: Extract<SignedEvent, { event: 'check' }>, options: RequestOptions) {
         const reply = await requestCheck(signed, options);
@@ -34,7 +36,7 @@ export function createSignatureSubmission(
         if (process !== 'CHECK' && process !== 'SIGNING') {
             return undefined;
         }
-        return run(async (options) => {
+        return run(async options => {
             const { signal } = options;
             let signed: SignedEvent;
             try {
@@ -44,15 +46,15 @@ export function createSignatureSubmission(
                     await showError(
                         getCryptoErrorKey(
                             getCryptoErrorCode(error),
-                            error instanceof CryptoProError && error.stage === 'signing' ? 'signing' : 'setup',
+                            error instanceof CryptoProError && error.stage === 'signing' ? 'signing' : 'setup'
                         ),
-                        options,
+                        options
                     );
                 }
                 return;
             }
             signal.throwIfAborted();
-            setState((previous) => ({ ...previous, signaturePhase: 'sending' }));
+            setState(previous => ({ ...previous, signaturePhase: 'sending' }));
             if (process === 'CHECK' && signed.event === 'check') {
                 await handleCheck(signed, options);
             } else if (process === 'SIGNING' && signed.event === 'signing') {

@@ -6,8 +6,8 @@ export default defineConfig({
     server: {
         proxy: {
             '/proxy/services': {
-                target: `http://127.0.0.1:${process.env.MOCK_PORT || 3001}`,
-            },
-        },
-    },
+                target: `http://127.0.0.1:${process.env.MOCK_PORT || 3001}`
+            }
+        }
+    }
 });

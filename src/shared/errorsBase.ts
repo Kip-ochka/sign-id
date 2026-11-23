@@ -58,10 +58,10 @@ export const errorsBase: Readonly<Partial<Record<string, string | null>>> = {
     // Ошибки передачи данных
     CONTENT_TOO_LARGE: 'CONTENT_TOO_LARGE',
     BAD_ENCODING: 'BAD_ENCODING',
-    BASE64_ERROR: 'BASE64_ERROR',
+    BASE64_ERROR: 'BASE64_ERROR'
 };
 
 // Ключи, которые зависят от этапа подписания CAdES.
 export const signingErrorOverrides: Readonly<Partial<Record<string, string>>> = {
-    '0x80004005': 'SIGN_FAILED',
+    '0x80004005': 'SIGN_FAILED'
 };

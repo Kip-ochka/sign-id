@@ -1,5 +1,4 @@
-import { loadSettings, requestStart } from '../../entities/signing';
-import type { RequestOptions } from '../../entities/signing';
+import { loadSettings, type RequestOptions, requestStart } from '../../entities/signing';
 import type { SettingsResponse } from '../../shared/api';
 
 // Настройки загружаются до start, чтобы его retry использовал актуальные значения.

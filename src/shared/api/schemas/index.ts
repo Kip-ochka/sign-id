@@ -3,7 +3,7 @@ export {
     hash256Schema,
     hash512Schema,
     isoDateTimeSchema,
-    nonNegativeIntSchema,
+    nonNegativeIntSchema
 } from './primitives.schema';
 export {
     certificateFiltersSchema,
@@ -25,7 +25,7 @@ export {
     signingScreenSchema,
     statusLevelSchema,
     statusScreenSchema,
-    testDocumentSchema,
+    testDocumentSchema
 } from './common.schema';
 export { screenResponseSchema, screenSchema, settingKeySchema, settingsResponseSchema } from './settings.schema';
 export {
@@ -36,14 +36,14 @@ export {
     readyStateRequestSchema,
     signingStateRequestSchema,
     startStateRequestSchema,
-    stateBaseRequestSchema,
+    stateBaseRequestSchema
 } from './requests.schema';
 export {
     documentDataSchema,
     documentResponseSchema,
     pollStatusResponseSchema,
     stateResponseSchema,
-    taskResponseSchema,
+    taskResponseSchema
 } from './responses.schema';
 export type { Base64, Hash256, Hash512, IsoDateTime, NonNegativeInt } from './primitives.schema';
 export type {
@@ -66,7 +66,7 @@ export type {
     SigningScreen,
     StatusLevel,
     StatusScreen,
-    TestDocument,
+    TestDocument
 } from './common.schema';
 export type { Screen, ScreenKey, ScreenResponse, SettingKey, SettingsResponse } from './settings.schema';
 export type {
@@ -78,12 +78,12 @@ export type {
     StartStateRequest,
     StateEvent,
     StateFiles,
-    StateRequest,
+    StateRequest
 } from './requests.schema';
 export type {
     DocumentData,
     DocumentResponse,
     PollStatusResponse,
     StateResponse,
-    TaskResponse,
+    TaskResponse
 } from './responses.schema';

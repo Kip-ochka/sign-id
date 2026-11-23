@@ -3,8 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { SigningScreen as SigningResponse } from '../../shared/api';
 import type { SignatureControls } from '../../entities/signing';
 import { openDocumentFile } from './documentFile';
-import { SigningScreen } from './SigningScreen';
-import type { SigningPhase } from './SigningScreen';
+import { type SigningPhase, SigningScreen } from './SigningScreen';
 
 type DownloadDocument = (id: string) => Promise<{ title: string; format: string; binary: string } | void> | undefined;
 
@@ -63,7 +62,7 @@ export function SigningDocuments({
             {...controls}
             response={response}
             pendingDocumentId={pending?.response === response ? pending.id : undefined}
-            onOpenDocument={(id) => {
+            onOpenDocument={id => {
                 openDocument(id);
             }}
         />

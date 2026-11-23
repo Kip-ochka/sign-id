@@ -1,7 +1,6 @@
 import { settingStages } from '../../entities/signing';
-import { useSigningProcess, useSigningNavigation } from '../../widgets/signing-process';
-import { Workplace } from '../../widgets/workplace';
-import type { SettingProgress } from '../../widgets/workplace';
+import { useSigningNavigation, useSigningProcess } from '../../widgets/signing-process';
+import { type SettingProgress, Workplace } from '../../widgets/workplace';
 
 export function SettingScreen() {
     const { current } = useSigningNavigation();
@@ -10,7 +9,7 @@ export function SettingScreen() {
         return null;
     }
     const progress = new Map<string, SettingProgress>();
-    settingStages.forEach((stage) => {
+    settingStages.forEach(stage => {
         const result = state.settingProgress?.[stage];
         if (!result) {
             return;

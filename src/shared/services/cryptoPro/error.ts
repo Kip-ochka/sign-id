@@ -38,7 +38,7 @@ export class CryptoProError extends Error {
         readonly stage: CryptoStage,
         code: string,
         cause?: unknown,
-        getLastError?: (cause: unknown) => unknown,
+        getLastError?: (cause: unknown) => unknown
     ) {
         let originalMessage = '';
         if (typeof cause === 'string') {
@@ -76,7 +76,7 @@ export async function cryptoOperation<T>(
     stage: CryptoStage,
     code: string,
     operation: () => Promise<T>,
-    getLastError?: (cause: unknown) => unknown,
+    getLastError?: (cause: unknown) => unknown
 ): Promise<T> {
     try {
         return await operation();

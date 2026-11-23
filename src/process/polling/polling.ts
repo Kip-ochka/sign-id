@@ -1,14 +1,13 @@
 import type { TaskResponse } from '../../shared/api';
 import { wait } from '../../shared/lib/async';
-import { requestPoll } from '../../entities/signing';
-import type { ProcessReply, RequestOptions } from '../../entities/signing';
+import { type ProcessReply, type RequestOptions, requestPoll } from '../../entities/signing';
 
 // Сообщает сценарию каждый новый task и возвращает первый ответ без task.
 export async function pollUntilProcess(
     task: TaskResponse,
     options: RequestOptions,
     onTask: (task: TaskResponse) => void,
-    onFirstPoll?: () => void,
+    onFirstPoll?: () => void
 ): Promise<ProcessReply> {
     onTask(task);
     await wait(options.settings.pull_time, options.signal);

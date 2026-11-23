@@ -10,7 +10,7 @@ export const settingsResponseSchema = z.object({
     retry_time: nonNegativeIntSchema,
     retry_addition: nonNegativeIntSchema,
     retry_count: nonNegativeIntSchema,
-    pull_time: nonNegativeIntSchema,
+    pull_time: nonNegativeIntSchema
 });
 
 // --- settings/{key} для ключа-кода ошибки
@@ -19,12 +19,12 @@ export const screenSchema = z.object({
     level: z.literal('WARNING'),
     title: z.string(),
     message: z.string(),
-    buttons: screenButtonsSchema,
+    buttons: screenButtonsSchema
 });
 
 export const screenResponseSchema = z.object({
     process: z.string(), // По умолчанию 'STATUS'
-    screen: screenSchema,
+    screen: screenSchema
 });
 
 export type SettingKey = z.infer<typeof settingKeySchema>;

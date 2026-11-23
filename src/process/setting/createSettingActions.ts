@@ -1,7 +1,14 @@
 import { getCryptoErrorCode } from '../../shared/lib/cryptoErrors';
-import { requestReady } from '../../entities/signing';
-import type { ProcessState, SettingStage, WorkplaceResult } from '../../entities/signing';
-import type { UpdateProcess, RunOperation, ApplyResponse, ShowSetupError } from '../../entities/signing';
+import {
+    type ApplyResponse,
+    type ProcessState,
+    requestReady,
+    type RunOperation,
+    type SettingStage,
+    type ShowSetupError,
+    type UpdateProcess,
+    type WorkplaceResult
+} from '../../entities/signing';
 import { checkWorkplace } from './checkWorkplace';
 import type { SettingCache } from './settingCache';
 
@@ -11,7 +18,7 @@ export function createSettingActions({
     run,
     applyResponse,
     showSetupError,
-    settingCache,
+    settingCache
 }: {
     state: ProcessState;
     setState: UpdateProcess;
@@ -26,17 +33,17 @@ export function createSettingActions({
         if (screen.process !== 'SETTING') {
             return undefined;
         }
-        return run(async (options) => {
+        return run(async options => {
             const { signal } = options;
-            setState((previous) => ({
+            setState(previous => ({
                 ...previous,
                 settingProgress: undefined,
-                workplaceCertificates: undefined,
+                workplaceCertificates: undefined
             }));
             const update = (stage: SettingStage, result: WorkplaceResult) =>
-                setState((previous) => ({
+                setState(previous => ({
                     ...previous,
-                    settingProgress: { ...previous.settingProgress, [stage]: result },
+                    settingProgress: { ...previous.settingProgress, [stage]: result }
                 }));
             const result = await checkWorkplace(
                 signal,
@@ -47,16 +54,16 @@ export function createSettingActions({
                     if (!screen.screen.lists?.testing?.some(({ name }) => name === stage)) {
                         await showSetupError(code, options);
                     }
-                },
+                }
             );
             if (!result || signal.aborted) {
                 return;
             }
 
             settingCache.save(inquiryId);
-            setState((previous) => ({
+            setState(previous => ({
                 ...previous,
-                workplaceCertificates: result.certificates,
+                workplaceCertificates: result.certificates
             }));
             const reply = await requestReady(options);
             await applyResponse(reply, options);
@@ -68,7 +75,7 @@ export function createSettingActions({
         if (state.screen.process !== 'SETTING' || result?.state !== 'ERROR') {
             return undefined;
         }
-        return run(async (options) => showSetupError(result.code, options));
+        return run(async options => showSetupError(result.code, options));
     };
 
     return { checkSetting, showSettingError };

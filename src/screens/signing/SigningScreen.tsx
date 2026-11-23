@@ -1,5 +1,5 @@
 import { toCertificateList } from '../../entities/signing';
-import { useSigningProcess, useSigningNavigation } from '../../widgets/signing-process';
+import { useSigningNavigation, useSigningProcess } from '../../widgets/signing-process';
 import { SigningDocuments } from '../../widgets/signing-documents';
 import { LoadingScreen } from '../../shared/ui/LoadingScreen';
 

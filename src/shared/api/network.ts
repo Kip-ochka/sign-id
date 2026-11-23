@@ -1,5 +1,5 @@
-import { AxiosHeaders, isAxiosError } from 'axios';
-import type { AxiosResponse } from 'axios';
+import { AxiosHeaders, type AxiosResponse, isAxiosError } from 'axios';
+
 import { getHttpAttemptLimit } from './process-contract';
 import type { SettingsResponse } from './types';
 import { wait } from '../lib/async';

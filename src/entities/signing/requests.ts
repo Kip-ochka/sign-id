@@ -1,22 +1,19 @@
-import { isAxiosError } from 'axios';
-import type { AxiosResponse } from 'axios';
+import { type AxiosResponse, isAxiosError } from 'axios';
 
 import {
+    type CheckStateRequest,
     getDocument,
     getSettings,
     localFallback,
     parseProcessResult,
     pollStatus,
+    type SettingsResponse,
     settingsResponseSchema,
+    type SigningStateRequest,
+    type StartStateRequest,
     state,
-    statusScreenSchema,
-} from '../../shared/api';
-import type {
-    CheckStateRequest,
-    SettingsResponse,
-    SigningStateRequest,
-    StartStateRequest,
-    StatusScreen,
+    type StatusScreen,
+    statusScreenSchema
 } from '../../shared/api';
 import type { StateFiles } from '../../shared/api/types';
 import { defaultSettings } from './model';
@@ -44,7 +41,7 @@ export class ProcessRequestError extends Error {
     constructor(
         readonly key: string,
         readonly requestId?: string,
-        readonly unauthorized = false,
+        readonly unauthorized = false
     ) {
         super(key);
     }
@@ -55,7 +52,7 @@ function requestBody(inquiryId: string): StartStateRequest {
         inquiry_id: inquiryId,
         req_time: new Date().toISOString(),
         sc_name: 'urn:front-corp-digital-id-microfront',
-        sp_name: 'urn:corp-digital-id',
+        sp_name: 'urn:corp-digital-id'
     };
 }
 
@@ -63,7 +60,7 @@ function requestBody(inquiryId: string): StartStateRequest {
 async function sendRequest<T>(
     send: () => Promise<T>,
     { settings, signal, onUnauthorized }: RequestOptions,
-    { document = false } = {},
+    { document = false } = {}
 ) {
     try {
         const response = await requestWithRetry(send, settings, signal);
@@ -173,7 +170,7 @@ export function requestCheck({ payload, files }: Extract<SignedEvent, { event: '
 
 export function requestSigning(
     { payload, files }: Extract<SignedEvent, { event: 'signing' }>,
-    options: RequestOptions,
+    options: RequestOptions
 ) {
     const body = { ...requestBody(options.inquiryId), ...payload };
     return sendState(() => state('signing', body, files, options.signal, options.session, options.token), options);
@@ -184,7 +181,7 @@ export async function requestDocument(documentId: string, options: RequestOption
     const { document_id, title, format, base64 } = await sendRequest(
         () => getDocument(body, options.signal, options.session, options.token),
         options,
-        { document: true },
+        { document: true }
     );
     const invalidDocument = () => new ProcessRequestError('RESPONSE_DOC_DOWNLOAD_ERROR');
     if (document_id !== documentId) {

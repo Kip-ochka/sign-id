@@ -1,14 +1,14 @@
-import type { SigningScreen as SigningResponse } from '../../shared/api';
-import { CertificatePicker, useSelectedCertificate } from '../../entities/signing';
-import type { SignatureControls } from '../../entities/signing';
 import Heading from '@sber-site/sbercraft-nova-kit/components/Heading';
 import Text from '@sber-site/sbercraft-nova-kit/components/Text';
 import { useBreakpoints } from '@sber-site/sbercraft-nova-kit/hooks/useBreakpoints';
-import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 import Typography from '@sber-site/malachite-kit/esm/components/Typography';
-import * as css from './SigningScreen.css';
-import { WorkActions } from '../../entities/signing';
+
+import type { SigningScreen as SigningResponse } from '../../shared/api';
+import { CertificatePicker, type SignatureControls, useSelectedCertificate, WorkActions } from '../../entities/signing';
+import { ContentWrapper } from '../../shared/ui/ContentWrapper';
 import { DocumentList } from './DocumentList';
+
+import * as css from './SigningScreen.css';
 
 export type SigningPhase = 'signing' | 'sending';
 
@@ -19,7 +19,7 @@ export function SigningScreen({
     phase,
     onSign,
     onOpenDocument,
-    pendingDocumentId,
+    pendingDocumentId
 }: SignatureControls & {
     response: SigningResponse;
     phase?: SigningPhase;
@@ -34,7 +34,7 @@ export function SigningScreen({
         message,
         buttons,
         step,
-        lists: { documents },
+        lists: { documents }
     } = response.screen;
     const blocked = busy || pendingDocumentId !== undefined || certificates.status === 'loading';
     let sign: (() => void) | undefined;
@@ -44,19 +44,19 @@ export function SigningScreen({
 
     return (
         <ContentWrapper>
-            <div className="sign_signing">
-                <div className="sign_signing__main">
+            <div className='sign_signing'>
+                <div className='sign_signing__main'>
                     {step && (
-                        <div className="sign_signinig_stepper">
+                        <div className='sign_signinig_stepper'>
                             <Typography.Paragraph>{step}</Typography.Paragraph>
                         </div>
                     )}
-                    <Heading tag="h1" size={isDesktop ? 'h2' : 'h3'} className="sign_signing__heading">
+                    <Heading tag='h1' size={isDesktop ? 'h2' : 'h3'} className='sign_signing__heading'>
                         {title}
                     </Heading>
-                    <Text className="sign_signing__subheading">{message}</Text>
+                    <Text className='sign_signing__subheading'>{message}</Text>
                     <CertificatePicker
-                        className="sign_signing__select"
+                        className='sign_signing__select'
                         certificates={certificates}
                         selected={selected}
                         onSelect={selectCertificate}

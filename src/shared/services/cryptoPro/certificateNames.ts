@@ -6,25 +6,25 @@ const personOids = {
     first_name: ['2.5.4.42', 'G', 'GN', 'GIVENNAME'],
     middle_name: ['2.5.4.43', 'I', 'INITIALS'],
     inn: ['1.2.643.3.131.1.1', 'INN', 'ИНН'],
-    snils: ['1.2.643.100.3', 'SNILS', 'СНИЛС'],
+    snils: ['1.2.643.100.3', 'SNILS', 'СНИЛС']
 } as const;
 
 const organizationOids = {
     name: ['2.5.4.10', 'O', 'ORGANIZATIONNAME'],
     inn: ['1.2.643.100.4', 'INNLE', 'ИНН ЮЛ', 'ИННЮЛ'],
-    ogrn: ['1.2.643.100.1', 'OGRN', 'ОГРН'],
+    ogrn: ['1.2.643.100.1', 'OGRN', 'ОГРН']
 } as const;
 
 const issuerInnAliases = [...personOids.inn, 'ИНН ОРГАНИЗАЦИИ'];
 const supportedDnKeys = new Set<string>([
     ...Object.values(personOids).flat(),
     ...Object.values(organizationOids).flat(),
-    ...issuerInnAliases,
+    ...issuerInnAliases
 ]);
 
 function decodeEscapes(value: string) {
-    return value.replace(/(?:\\[\da-f]{2})+|\\./gi, (escape) =>
-        escape.length === 2 ? escape.slice(1) : decodeURIComponent(escape.replaceAll('\\', '%')),
+    return value.replace(/(?:\\[\da-f]{2})+|\\./gi, escape =>
+        escape.length === 2 ? escape.slice(1) : decodeURIComponent(escape.replaceAll('\\', '%'))
     );
 }
 
@@ -110,8 +110,8 @@ function readDn(dn: string) {
 
 function readFields<K extends string>(attributes: Map<string, string[]>, mapping: Record<K, readonly string[]>) {
     const fields: Partial<Record<K, string>> = {};
-    (Object.keys(mapping) as K[]).forEach((key) => {
-        const values = new Set(mapping[key].flatMap((name) => attributes.get(name) ?? []));
+    (Object.keys(mapping) as K[]).forEach(key => {
+        const values = new Set(mapping[key].flatMap(name => attributes.get(name) ?? []));
         const value = values.values().next().value;
         if (values.size === 1 && value?.trim()) {
             fields[key] = value;
@@ -122,7 +122,7 @@ function readFields<K extends string>(attributes: Map<string, string[]>, mapping
 
 function readIssuer(attributes: Map<string, string[]>) {
     const issuer = readFields(attributes, organizationOids);
-    if (organizationOids.inn.some((alias) => attributes.has(alias))) {
+    if (organizationOids.inn.some(alias => attributes.has(alias))) {
         return issuer;
     }
 
@@ -135,7 +135,7 @@ function toCertificateNames(subject: Map<string, string[]>, issuer: Map<string, 
         person: readFields(subject, personOids),
         organization: readFields(subject, organizationOids),
         issuer: readIssuer(issuer),
-        hasMiddleNameAttribute: personOids.middle_name.some((key) => subject.has(key)),
+        hasMiddleNameAttribute: personOids.middle_name.some(key => subject.has(key))
     };
 }
 
@@ -152,7 +152,7 @@ export function readCertificateNames(subjectName: string, issuerName: string) {
     const issuer = tryReadDn(issuerName);
     return {
         names: toCertificateNames(subject ?? new Map(), issuer ?? new Map()),
-        incomplete: !subject || !issuer,
+        incomplete: !subject || !issuer
     };
 }
 
@@ -171,7 +171,7 @@ function resolveCertificatePerson(
     person: CertificateNames['person'],
     firstName: string,
     middleName: string,
-    lastName: string,
+    lastName: string
 ) {
     const givenNames = person.first_name;
     const normalizedGivenNames = normalizeName(givenNames);
@@ -186,7 +186,7 @@ function resolveCertificatePerson(
 
     // Фильтр подтверждает границу, а значения берём из сертификата.
     const boundary = Array.from(givenNames.matchAll(/\s+/g)).find(
-        ({ index }) => normalizeName(givenNames.slice(0, index)) === firstName,
+        ({ index }) => normalizeName(givenNames.slice(0, index)) === firstName
     );
     if (!boundary) {
         return person;
@@ -194,7 +194,7 @@ function resolveCertificatePerson(
     return {
         ...person,
         first_name: givenNames.slice(0, boundary.index).trim(),
-        middle_name: person.middle_name ?? givenNames.slice(boundary.index + boundary[0].length).trim(),
+        middle_name: person.middle_name ?? givenNames.slice(boundary.index + boundary[0].length).trim()
     };
 }
 
@@ -228,7 +228,7 @@ function joinGivenNames(firstName: string, middleName: string) {
 
 function matchPerson(
     { person, hasMiddleNameAttribute }: CertificateNames,
-    filter: NonNullable<CertificateFilters['person']> = {},
+    filter: NonNullable<CertificateFilters['person']> = {}
 ) {
     const { last_name, first_name, middle_name, ...identifiers } = filter;
     const lastName = normalizeName(last_name);

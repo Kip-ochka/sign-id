@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
+
 import { getCryptoErrorKey } from '../../shared/lib/cryptoErrors';
-import { loadErrorScreen } from '../../entities/signing';
-import type { RequestOptions } from '../../entities/signing';
-import { showScreen } from '../../entities/signing';
-import type { UpdateProcess } from '../../entities/signing';
+import { loadErrorScreen, type RequestOptions, showScreen, type UpdateProcess } from '../../entities/signing';
 
 export function useProcessErrors(setState: UpdateProcess) {
     // Загружаем текст ошибки из справочника и показываем ID исходного запроса.
@@ -11,10 +9,10 @@ export function useProcessErrors(setState: UpdateProcess) {
         async (key: string | undefined, options: RequestOptions, requestId?: string) => {
             const screen = await loadErrorScreen(key, options);
             if (!options.signal.aborted) {
-                setState((previous) => showScreen(previous, { ...screen }, requestId, key));
+                setState(previous => showScreen(previous, { ...screen }, requestId, key));
             }
         },
-        [setState],
+        [setState]
     );
 
     const showSetupError = useCallback(
@@ -24,7 +22,7 @@ export function useProcessErrors(setState: UpdateProcess) {
             }
             return showError(getCryptoErrorKey(code, 'setup'), options);
         },
-        [showError],
+        [showError]
     );
 
     return { showError, showSetupError };

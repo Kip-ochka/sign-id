@@ -42,25 +42,20 @@
     margin: 0;
 }
 
-.sign_status__actions {
-    --digital_id_sign_sign-status-actions-gap: 24px;
-    --digital_id_sign_sign-status-actions-width: 220px;
-    width: var(--digital_id_sign_sign-status-actions-width);
+.sign_actions.sign_status__actions {
+    --digital_id_sign_sign-status-actions-gap: 20px;
+    width: fit-content;
     margin-top: var(--digital_id_sign_sign-status-actions-gap);
 }
 
-.sign_actions.sign_status__actions > * {
-    width: 100%;
+.sign_actions.sign_status__actions > *,
+.sign_actions.sign_status__actions button {
+    width: fit-content;
 }
 
 @media (min-width: 768px) {
     .sign_status {
         --digital_id_sign_sign-status-padding-inline: 45px;
-    }
-
-    .sign_status__actions {
-        --digital_id_sign_sign-status-actions-gap: 54px;
-        --digital_id_sign_sign-status-actions-width: 420px;
     }
 }
 
@@ -71,11 +66,6 @@
 
     .sign_status__icon {
         --digital_id_sign_sign-status-icon-gap: 24px;
-    }
-
-    .sign_status__actions {
-        --digital_id_sign_sign-status-actions-gap: 60px;
-        --digital_id_sign_sign-status-actions-width: 220px;
     }
 
     .sign_status__copy {

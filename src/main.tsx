@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom';
+
 import DigitalIDSign from './DigitalIDSign';
 
 const root = document.getElementById('root');
@@ -12,5 +13,5 @@ ReactDOM.render(
     <StrictMode>
         <DigitalIDSign />
     </StrictMode>,
-    root,
+    root
 );

@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { env } from 'node:process';
+
 import { config, document, errorScreen, process, settings } from './data.mjs';
 
 const app = express();
@@ -33,7 +34,7 @@ app.post(`${api}/document`, (request, response) => {
     const metadata = {
         document_id: request.body.document_id,
         title: document.title,
-        format: document.format,
+        format: document.format
     };
     response
         .status(config.http.document)
@@ -51,8 +52,8 @@ app.post(`${api}/document`, (request, response) => {
                 '',
                 document.base64,
                 `--${boundary}--`,
-                '',
-            ].join('\r\n'),
+                ''
+            ].join('\r\n')
         );
 });
 

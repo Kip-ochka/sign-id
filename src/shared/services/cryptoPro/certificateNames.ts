@@ -15,10 +15,19 @@ const organizationOids = {
     ogrn: ['1.2.643.100.1', 'OGRN', 'ОГРН']
 } as const;
 
+const commonNameOids = ['2.5.4.3', 'CN', 'COMMONNAME'] as const;
+const subjectOids = {
+    commonName: commonNameOids,
+    ogrnip: ['1.2.643.100.5', 'OGRNIP', 'ОГРНИП'],
+    organizationalUnit: ['2.5.4.11', 'OU', 'ORGANIZATIONALUNITNAME', 'ORGANIZATIONUNITNAME'],
+    title: ['2.5.4.12', 'T', 'TITLE']
+} as const;
+const issuerOids = { ...organizationOids, name: commonNameOids };
 const issuerInnAliases = [...personOids.inn, 'ИНН ОРГАНИЗАЦИИ'];
 const supportedDnKeys = new Set<string>([
     ...Object.values(personOids).flat(),
     ...Object.values(organizationOids).flat(),
+    ...Object.values(subjectOids).flat(),
     ...issuerInnAliases
 ]);
 
@@ -121,7 +130,7 @@ function readFields<K extends string>(attributes: Map<string, string[]>, mapping
 }
 
 function readIssuer(attributes: Map<string, string[]>) {
-    const issuer = readFields(attributes, organizationOids);
+    const issuer = readFields(attributes, issuerOids);
     if (organizationOids.inn.some(alias => attributes.has(alias))) {
         return issuer;
     }
@@ -130,11 +139,37 @@ function readIssuer(attributes: Map<string, string[]>) {
     return inn && /^\d{10}$/.test(inn) ? { ...issuer, inn } : issuer;
 }
 
-function toCertificateNames(subject: Map<string, string[]>, issuer: Map<string, string[]>) {
+function readOwnerType(subject: Map<string, string[]>, ogrn?: string, ogrnip?: string) {
+    if (/^\d{15}$/.test(ogrnip ?? '') && organizationOids.ogrn.every(key => !subject.has(key))) {
+        return 'individualEntrepreneur';
+    }
+    if (/^\d{13}$/.test(ogrn ?? '') && subjectOids.ogrnip.every(key => !subject.has(key))) {
+        return 'russianOrganization';
+    }
+    return undefined;
+}
+
+function toCertificateNames(
+    subject: Map<string, string[]>,
+    issuer: Map<string, string[]>,
+    extensions?: ReturnType<typeof readCertificateDerNames>['extensions']
+) {
+    const person = readFields(subject, personOids);
+    const organization = readFields(subject, organizationOids);
+    const subjectDetails = readFields(subject, subjectOids);
+    const ownerType = readOwnerType(subject, organization.ogrn, subjectDetails.ogrnip);
     return {
-        person: readFields(subject, personOids),
-        organization: readFields(subject, organizationOids),
+        person,
+        organization:
+            ownerType === 'russianOrganization' ? { ...organization, name: subjectDetails.commonName } : organization,
         issuer: readIssuer(issuer),
+        details: {
+            ...subjectDetails,
+            givenName: person.first_name,
+            organizationName: organization.name,
+            ownerType,
+            ...extensions
+        },
         hasMiddleNameAttribute: personOids.middle_name.some(key => subject.has(key))
     };
 }
@@ -148,17 +183,12 @@ function tryReadDn(dn: string) {
 }
 
 export function readCertificateNames(subjectName: string, issuerName: string) {
-    const subject = tryReadDn(subjectName);
-    const issuer = tryReadDn(issuerName);
-    return {
-        names: toCertificateNames(subject ?? new Map(), issuer ?? new Map()),
-        incomplete: !subject || !issuer
-    };
+    return toCertificateNames(tryReadDn(subjectName) ?? new Map(), tryReadDn(issuerName) ?? new Map());
 }
 
 export function readCertificateNamesByOid(base64: string) {
-    const { subject, issuer } = readCertificateDerNames(base64);
-    return toCertificateNames(subject, issuer);
+    const { subject, issuer, extensions } = readCertificateDerNames(base64);
+    return toCertificateNames(subject, issuer, extensions);
 }
 
 type CertificateNames = ReturnType<typeof toCertificateNames>;
@@ -219,13 +249,6 @@ function matchesFields(fields: Partial<Record<string, string>>, filter?: Partial
     });
 }
 
-function joinGivenNames(firstName: string, middleName: string) {
-    if (!middleName || firstName.endsWith(` ${middleName}`)) {
-        return firstName;
-    }
-    return `${firstName} ${middleName}`;
-}
-
 function matchPerson(
     { person, hasMiddleNameAttribute }: CertificateNames,
     filter: NonNullable<CertificateFilters['person']> = {}
@@ -235,7 +258,12 @@ function matchPerson(
     const firstName = normalizeName(first_name);
     const middleName = normalizeName(middle_name);
     if (!lastName || !firstName || !middleName) {
-        return matchesFields(person, filter) ? person : undefined;
+        if (!matchesFields(person, filter)) {
+            return undefined;
+        }
+        const unresolved = { ...person };
+        delete unresolved.middle_name;
+        return unresolved;
     }
 
     const actualMiddleName = normalizeName(person.middle_name);
@@ -248,9 +276,7 @@ function matchPerson(
     }
 
     const resolved = resolveCertificatePerson(person, firstName, middleName, lastName);
-    const actualFirstName = normalizeName(resolved.first_name);
-    return actualFirstName &&
-        joinGivenNames(actualFirstName, normalizeName(resolved.middle_name)) === joinGivenNames(firstName, middleName)
+    return normalizeName(resolved.first_name) === firstName && normalizeName(resolved.middle_name) === middleName
         ? resolved
         : undefined;
 }

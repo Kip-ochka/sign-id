@@ -14,6 +14,7 @@ import { cryptoOperation, CryptoProError } from './error';
 type CertificateNames = ReturnType<typeof readCertificateNamesByOid>;
 export type SigningCertificate = Omit<Certificate, 'certificate_base64'> & {
     pluginCertificate: PluginCertificate;
+    details?: CertificateNames['details'];
 };
 type SigningHashes = Partial<Pick<TestDocument, 'hash256' | 'hash512'>>;
 
@@ -57,7 +58,10 @@ async function getValidCertificates() {
     });
 }
 
-async function readCertificate(certificate: PluginCertificate, { person, organization, issuer }: CertificateNames) {
+async function readCertificate(
+    certificate: PluginCertificate,
+    { person, organization, issuer, details }: CertificateNames
+) {
     const serial = await certificate.getCadesProp('SerialNumber');
     const expiry = new Date(certificate.validTo);
     if (
@@ -72,6 +76,7 @@ async function readCertificate(certificate: PluginCertificate, { person, organiz
         person,
         organization,
         issuer,
+        details,
         type: 'signed' as const,
         serial_number: serial,
         thumbprint: certificate.thumbprint,
@@ -80,18 +85,13 @@ async function readCertificate(certificate: PluginCertificate, { person, organiz
 }
 
 async function readMatchingNames(certificate: PluginCertificate, filters?: CertificateFilters) {
-    const { names, incomplete } = readCertificateNames(certificate.subjectName, certificate.issuerName);
-    const matched = matchCertificate(names, filters);
-    if (matched && !incomplete) {
-        return matched;
-    }
+    let names;
     try {
-        const decoded = readCertificateNamesByOid(await certificate.exportBase64());
-        return matchCertificate(decoded, filters);
+        names = readCertificateNamesByOid(await certificate.exportBase64());
     } catch {
-        // Отказ экспорта или разбора не мешает проверить другие сертификаты.
-        return matched;
+        names = readCertificateNames(certificate.subjectName, certificate.issuerName);
     }
+    return matchCertificate(names, filters);
 }
 
 export async function findCertificates(filters?: CertificateFilters) {
@@ -104,15 +104,14 @@ export async function findCertificates(filters?: CertificateFilters) {
             if (certificates.has(thumbprint)) {
                 return;
             }
-            const names = await readMatchingNames(certificate, filters);
-            if (!names) {
-                return;
-            }
             try {
-                certificates.set(thumbprint, {
-                    ...(await readCertificate(certificate, names)),
-                    pluginCertificate: certificate
-                });
+                const names = await readMatchingNames(certificate, filters);
+                if (names) {
+                    certificates.set(thumbprint, {
+                        ...(await readCertificate(certificate, names)),
+                        pluginCertificate: certificate
+                    });
+                }
             } catch {
                 // Без реквизитов для запроса этот сертификат не предлагается.
             }
@@ -153,7 +152,16 @@ export async function signHash(certificate: SigningCertificate, hashes: SigningH
 }
 
 export async function signHashes(
-    { pluginCertificate, ...metadata }: SigningCertificate,
+    {
+        pluginCertificate,
+        type,
+        serial_number,
+        thumbprint,
+        expires_at,
+        person,
+        organization,
+        issuer
+    }: SigningCertificate,
     documents: readonly SigningHashes[],
     signal?: AbortSignal
 ) {
@@ -168,7 +176,13 @@ export async function signHashes(
         'certificate',
         'CERTIFICATE_EXPORT_FAILED',
         async () => ({
-            ...metadata,
+            type,
+            serial_number,
+            thumbprint,
+            expires_at,
+            person,
+            organization,
+            issuer,
             certificate_base64: readBase64(await pluginCertificate.exportBase64(), 'certificate')
         })
     );

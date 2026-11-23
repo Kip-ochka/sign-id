@@ -19,10 +19,14 @@ export function toCertificateList(certificates?: readonly SigningCertificate[]):
         options: certificates.map(certificate => ({
             id: certificate.thumbprint,
             title:
+                certificate.details?.commonName ||
                 [certificate.person?.last_name, certificate.person?.first_name, certificate.person?.middle_name]
                     .filter(Boolean)
-                    .join(' ') || certificate.serial_number,
-            organization: certificate.organization?.name ?? '',
+                    .join(' ') ||
+                certificate.details?.organizationName ||
+                certificate.serial_number,
+            organization:
+                (certificate.details ? certificate.details.organizationName : certificate.organization?.name) ?? '',
             serial: certificate.serial_number,
             expires: certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString('ru-RU') : ''
         }))

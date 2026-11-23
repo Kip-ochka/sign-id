@@ -104,6 +104,53 @@ function readName(name: DerValue) {
     return attributes;
 }
 
+function readExtension(fields: DerValue[], oid: string) {
+    try {
+        const wrapper = fields.find(field => field.tag === 0xa3);
+        const extensions = wrapper ? children(children(wrapper, 0xa3)[0], 0x30) : [];
+        const matching = extensions
+            .map(extension => children(extension, 0x30))
+            .filter(([id]) => id?.tag === 6 && readOid(id.bytes) === oid);
+        const value = matching.length === 1 ? matching[0].at(-1) : undefined;
+        if (value?.tag === 4) {
+            const decoded = readValue(value.bytes, 0);
+            if (decoded.end === value.bytes.length) {
+                return children(decoded, 0x30);
+            }
+        }
+    } catch {
+        // Ошибка необязательного расширения не отменяет чтение Subject и Issuer.
+    }
+    return [];
+}
+
+function readKeyDate(fields: DerValue[], tag: number) {
+    const matching = fields.filter(field => field.tag === tag);
+    const value = matching.length === 1 ? new TextDecoder().decode(matching[0].bytes) : '';
+    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z$/.exec(value);
+    if (!match) {
+        return undefined;
+    }
+    const [, year, month, day, hour, minute, second] = match;
+    const iso = `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+    const date = new Date(iso);
+    return Number.isFinite(date.getTime()) && date.toISOString() === iso ? iso : undefined;
+}
+
+function readCertificateExtensions(fields: DerValue[]) {
+    const authority = readExtension(fields, '2.5.29.35');
+    const serials = authority.filter(field => field.tag === 0x82);
+    const serial = serials.length === 1 ? serials[0].bytes : undefined;
+    const keyPeriod = readExtension(fields, '2.5.29.16');
+    return {
+        issuerCertificateSerial: serial?.length
+            ? Array.from(serial, byte => byte.toString(16).padStart(2, '0')).join('')
+            : undefined,
+        privateKeyValidFrom: readKeyDate(keyPeriod, 0x80),
+        privateKeyValidTo: readKeyDate(keyPeriod, 0x81)
+    };
+}
+
 export function readCertificateDerNames(base64: string) {
     const bytes = Uint8Array.from(atob(base64.replace(/\s/g, '')), char => char.charCodeAt(0));
     const certificate = readValue(bytes, 0);
@@ -124,6 +171,7 @@ export function readCertificateDerNames(base64: string) {
     }
     return {
         subject: readName(fields[issuerIndex + 2]),
-        issuer: readName(fields[issuerIndex])
+        issuer: readName(fields[issuerIndex]),
+        extensions: readCertificateExtensions(fields.slice(issuerIndex + 4))
     };
 }
